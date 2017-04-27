@@ -17,7 +17,7 @@
 
 using namespace std;
 
-void split(string in, vector<string> out){
+void split(string in, vector<string> &out){
 	stringstream stream(in);
 	string tempString;
 	

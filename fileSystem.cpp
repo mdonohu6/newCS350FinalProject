@@ -42,6 +42,36 @@ fileSystem::fileSystem(string diskName){
 }
 
 void fileSystem::create(string ssfsFName){
+    char tab2[1024];
+    strncpy(tab2, ssfsFName.c_str(), sizeof(tab2));
+    tab2[sizeof(tab2) - 1] = 0;
+    bool uniqueFlag = true;
+    for (int i = 0; i < 256; i++) {
+        if (iNodeList[i].getFileName() == ssfsFName)
+            uniqueFlag = false;
+    }
+    
+    iNode input;
+    if (uniqueFlag) {
+        input.setFileName(tab2);
+    }
+    else {
+        cout << "This file already exists.";
+        return;
+    }
+    
+    bool freeFlag = false;
+    for (int i = 0; i < 256; i++) {
+        if (freeiNodeList[i] == false) {
+            freeiNodeList[i] = true;
+            iNodeList[i] = input;
+            freeFlag = true;
+            break;
+        }
+    }
+    
+    if (!freeFlag)
+        cout << "There is not enough free memory to create a new file.";
 	
 }
 void fileSystem::import(string ssfsFName, string unixFName){

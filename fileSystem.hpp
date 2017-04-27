@@ -16,6 +16,8 @@
 #include <string>
 #include "iNode.hpp"
 
+using namespace std;
+
 class fileSystem{
 
 /*
