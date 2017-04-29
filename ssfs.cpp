@@ -37,7 +37,7 @@ void parseInputFile(char* diskName, char* fName){
 	vector <string> command_split;
 	
 	fileSystem fileSys(diskName);
-	
+	cout<<"here"<<endl;
 	while(!input.eof()){
 		
 		string ssfsFName, unixFName;
@@ -99,7 +99,7 @@ void parseInputFile(char* diskName, char* fName){
 			
 		}
 		else if(command_split[0] == "LIST"){
-			fileSys.list();
+			cout<<fileSys.list();
 			
 			
 		}

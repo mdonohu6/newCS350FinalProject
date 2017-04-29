@@ -38,9 +38,14 @@ fileSystem::fileSystem(string diskName){
 	
 	
 	
+	
+	
+	//the number of block pointers you can fit in an indirect block
 	indBlockSize = blockSize / log2(numBlocks);
 	
-	//This is wrong***********************************
+	
+	
+	//the number of indirect block pointers you can fit in a double indirect block
 	doubleIndSize = blockSize / log2(numBlocks);
 
 	
@@ -85,6 +90,15 @@ void fileSystem::create(string ssfsFName){
 void fileSystem::import(string ssfsFName, string unixFName){
 
 	
+	
+	ifstream unixFile;
+	unixFile.open(unixFName, ios::binary | ios::in);
+	
+	// TODO: check to make sure file isnt too big
+
+	
+	
+
 	//find index in iNodeList where ssfs file is
 	int iNodeIndex;
 	for(iNodeIndex = 0; iNodeIndex<256; iNodeIndex++)
@@ -92,10 +106,6 @@ void fileSystem::import(string ssfsFName, string unixFName){
 			break;
 	
 	
-	
-	
-	ifstream unixFile;
-	unixFile.open(unixFName, ios::binary | ios::in);
 	
 	char toBeWritten[blockSize];
 	
@@ -156,7 +166,7 @@ void fileSystem::import(string ssfsFName, string unixFName){
 				
 					iNodeList[iNodeIndex].ib.blockTable.push_back(blockNum);
 					
-					//TODO Write toBeWritten of data to ( offset + (blockNum * blockSize))
+					//TODO Write toBeWritten to ( offset + (blockNum * blockSize))
 
 					
 					
@@ -204,9 +214,9 @@ void fileSystem::import(string ssfsFName, string unixFName){
 					}
 					
 					(iNodeList[iNodeIndex].doubleIndBlockTable.front()).blockTable.push_back(blockNum);
+	
 					
-
-					
+					//TODO Write toBeWritten to ( offset + (blockNum * blockSize))
 				}
 				
 				break;
@@ -225,7 +235,26 @@ void fileSystem::cat(string ssfsFName){
 
 void fileSystem::del(string ssfsFName){
 	
+	
+	//find iNode in iNodeList
+	int iNodeIndex;
+	for(iNodeIndex = 0; iNodeIndex<256; iNodeIndex++)
+		if(iNodeList[iNodeIndex].getFileName() == ssfsFName)
+			break;
 
+
+	
+	
+	
+	//TODO: free all blocks associated with file
+
+	
+	
+	
+	//add iNodeIndex to free list
+	freeiNodeList[iNodeIndex] = 0;
+	
+	
 	
 }
 
@@ -242,10 +271,17 @@ void fileSystem::read(string ssfsFName, int startByte, int numBytes){
 
 
 string fileSystem::list(){
+	string fileList = "";
 	
+	for (int i = 0; i<256; i++) {
+		if(iNodeList[i].getFileName() != (string) "~")
+			fileList +=( iNodeList[i].getFileName() + (string)"\n");
+		   
+	}
 
-	return "place holder";
+	return fileList;
 }
+
 
 void fileSystem::shutdown(){
 	

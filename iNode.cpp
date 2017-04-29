@@ -10,11 +10,13 @@
 
 // default all values
 iNode::iNode() {
-    fSize = -1;
+    fSize = -1;  //in blocks 
     for(int i = 0; i < 12; i++) blockAddressTable[i] = -1;
     ib.pointer = -1;
     doubleIndBlock = -1;
-    for(int i = 0; i < 32; i++) fileName[i] = 'x';
+	fileName[0] = '~';
+	fileName[1] = '\0';
+
 }
 
 
