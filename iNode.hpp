@@ -14,17 +14,18 @@
 #include <vector>
 
 struct indBlock{
-
+	
 	int pointer;
 	std::vector<int> blockTable;
+	
 };
 
 
 class iNode{
 public:
     iNode();
-    iNode(int, int[12], int, int, char[32],int);
-	iNode(char[32],int);
+    iNode(int, int[12], int, int, char[32]);
+	iNode(char[32]);
     char * getFileName();
     void setFileName(char* fn);
 	int blockAddressTable[12];

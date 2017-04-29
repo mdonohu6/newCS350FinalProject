@@ -62,7 +62,7 @@ void fileSystem::create(string ssfsFName){
             unique = false;
     }
     
-    iNode input(tab2, indBlockSize);
+    iNode input(tab2);
     if (!unique) {
         cout << "This file already exists.";
         return;
