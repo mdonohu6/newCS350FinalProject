@@ -11,22 +11,35 @@
 
 #include <stdio.h>
 #include <string>
+#include <vector>
+
+struct indBlock{
+
+	int pointer;
+	std::vector<int> blockTable;
+};
+
 
 class iNode{
 public:
     iNode();
-    iNode(int, int[12], int, int, char[32]);
+    iNode(int, int[12], int, int, char[32],int);
+	iNode(char[32],int);
     char * getFileName();
     void setFileName(char* fn);
-    
-private:
+	int blockAddressTable[12];
+
+	
     // fileName is char arry of size 32 bytes, as specified in Program5 instructions
     int fSize;
-    int blockAddressTable[12];
-    int indBlock;
+    indBlock ib;
+	std::vector<indBlock> doubleIndBlockTable;
+
+	
     int doubleIndBlock;
     char fileName[32];
-    
+
+	
 };
 
 

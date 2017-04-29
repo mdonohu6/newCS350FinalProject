@@ -15,6 +15,7 @@
 #include <vector>
 #include <string>
 #include "iNode.hpp"
+#include "math.h"
 
 using namespace std;
 
@@ -47,10 +48,7 @@ class fileSystem{
 public:
     //Constructors
     fileSystem(std::string diskName);
-    bool * freeBlockList; // allocate this when we know size
-    bool freeiNodeList [256] = {false};
-    iNode iNodeList [256];
-    
+	
     
     void create(std::string ssfsFName);
     void import(std::string ssfsFName, std::string unixFName);
@@ -62,7 +60,18 @@ public:
     void shutdown();
     
 private:
-    
+	bool * freeBlockList; // allocate this when we know size
+    bool freeiNodeList [256] = {false};
+    iNode iNodeList [256];
+	
+	int indBlockSize; //the number of block numbers you can store in an indirect block
+	int doubleIndSize; // the number of indirect blocks you can store in a double indirect block
+	
+	int numBlocks;
+	int blockSize;
+	int offset;
+	
+
 	
 };
 
