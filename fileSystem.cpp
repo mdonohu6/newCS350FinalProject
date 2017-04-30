@@ -9,7 +9,7 @@
 #include "fileSystem.hpp"
 using namespace std;
 
-
+#define OFFSET 259
 
 struct Superblock{
 	int numBlocks;
@@ -21,7 +21,9 @@ struct Superblock{
 
 
 
-fileSystem::fileSystem(string diskName){
+fileSystem::fileSystem(string fileName){
+	diskName = fileName;
+
 	ifstream ifs;	
 	ifs.open(diskName, ios::in | ios::binary);
 
@@ -54,6 +56,8 @@ fileSystem::fileSystem(string diskName){
 	if(blank.hasFiles){
 
 	}
+
+	ifs.close();
 	
 }
 
@@ -227,10 +231,68 @@ void fileSystem::import(string ssfsFName, string unixFName){
 }
 
 
-
+// if this is not working, read the comments in second for loop below -- most likely cause of problems
 void fileSystem::cat(string ssfsFName){
-	
-	
+	//find iNode in iNodeList
+	int iNodeIndex;
+	for(iNodeIndex = 0; iNodeIndex<256; iNodeIndex++)
+		if(iNodeList[iNodeIndex].getFileName() == ssfsFName)
+			break;
+
+	if(iNodeIndex < 256) {
+		ifstream diskFile;
+		diskFile.open(diskName, ios::binary | ios::in);
+
+		int directBlocksRead = 0; // keep track of the 12 blocks we must iterate through first
+		int indirectBlocksRead = 0; // keep track of how many blocks we've read from the current indirect block being pointed to (changes once we enter double indirect blocks)
+		int doubleIndirectBlocksRead = 0; // keep track of what # indirect block we should be looking at from the doubleIndBlock vector in currentNode
+		iNode* currentNode = &iNodeList[iNodeIndex]; // store this indexed value just because it gets referenced so often below
+		indBlock* currentIndBlock = &currentNode->ib; // start off with the single indirect block assigned to this inode
+		// after reading this first indBlock, this value will iterate through the list of indBlocks in the doubleIndBlockPtr vector of indBlocks
+
+		while(doubleIndirectBlocksRead < currentNode->doubleIndBlockTable.size()) {
+			if(directBlocksRead < 12) { // seek to next entry in direct block table
+				if(currentNode->blockAddressTable[directBlocksRead] == -1) break;
+
+				diskFile.seekg(OFFSET*blockSize + (currentNode->blockAddressTable[directBlocksRead] * blockSize));
+
+				directBlocksRead++;
+			} else if(indirectBlocksRead < currentIndBlock->blockTable.size()){ // seek to the next entry in indirect block table
+				if(currentIndBlock->blockTable[indirectBlocksRead] == -1) break;
+
+				diskFile.seekg(OFFSET*blockSize + (currentIndBlock->blockTable[indirectBlocksRead] * blockSize));
+
+				indirectBlocksRead++;
+			} else {
+				// following three lines allow us to iterate through this vector of indBlocks in the same manner we did above to the initial indBlock
+				currentIndBlock = &currentNode->doubleIndBlockTable[doubleIndirectBlocksRead];
+				indirectBlocksRead = 0;
+				doubleIndirectBlocksRead++;
+
+				continue;
+			}
+
+			char buf;
+			for(int i = 0; i < blockSize; i++) {
+				diskFile.read(&buf, 1); // read one char at a time because we need to identify when we reach the end of the file
+				diskFile.seekg(diskFile.cur + 1); // move read pointer to next char in file
+				if(buf == '\0') { // *IMPORTANT* \0 acting as a placeholder for whatever the file will be populated with as empty space
+					// acting as a sentinel since break will only leave the for loop
+					doubleIndirectBlocksRead = currentNode->doubleIndBlockTable.size();
+
+					break;
+				}
+
+				cout << buf;
+			}
+		}
+
+		cout << endl; // spacing after all of the data has been put out with no endls between
+
+		diskFile.close();
+	} else { // file was not found in the list
+		cerr << ssfsFName << " was not found in the disk" << endl;
+	}
 }
 
 void fileSystem::del(string ssfsFName){
@@ -259,14 +321,151 @@ void fileSystem::del(string ssfsFName){
 }
 
 void fileSystem::write(string ssfsFName, char ch, int startByte, int numBytes){
+	//find iNode in iNodeList
+	int iNodeIndex;
+	for(iNodeIndex = 0; iNodeIndex<256; iNodeIndex++)
+		if(iNodeList[iNodeIndex].getFileName() == ssfsFName)
+			break;
 
-	
-	
-	
+	if(iNodeIndex < 256) {
+		ofstream outFile;
+		outFile.open(diskName, ios::binary | ios::out);
+
+		int bytesRemaining = numBytes; // keeps track of how many bytes we still need to read out
+		int directBlocksRead = 0; // keep track of the 12 blocks we must iterate through first
+		int indirectBlocksRead = 0; // keep track of how many blocks we've read from the current indirect block being pointed to (changes once we enter double indirect blocks)
+		int doubleIndirectBlocksRead = 0; // keep track of what # indirect block we should be looking at from the doubleIndBlock vector in currentNode
+		int bytesToWrite; // will determine how many bytes we write below after seeking to the correct position in the file
+		iNode* currentNode = &iNodeList[iNodeIndex]; // store this indexed value just because it gets referenced so often below
+		indBlock* currentIndBlock = &currentNode->ib; // start off with the single indirect block assigned to this inode
+		// after reading this first indBlock, this value will iterate through the list of indBlocks in the doubleIndBlockPtr vector of indBlocks
+
+		while(bytesRemaining > 0 && doubleIndirectBlocksRead < currentNode->doubleIndBlockTable.size()) {
+			if(startByte >= blockSize) { // skip over the whole read process if the startByte is further than the upcoming block's end point
+				startByte -= blockSize;
+
+				if(directBlocksRead < 12) directBlocksRead++;
+				else if(indirectBlocksRead < currentIndBlock->blockTable.size()) indirectBlocksRead++;
+				else doubleIndirectBlocksRead++;
+
+				continue;
+			} else {
+				if(directBlocksRead < 12) { // seek to next entry in direct block table
+					outFile.seekp(OFFSET*blockSize + (currentNode->blockAddressTable[directBlocksRead] * blockSize));
+
+					directBlocksRead++;
+				} else if(indirectBlocksRead < currentIndBlock->blockTable.size()){ // seek to the next entry in indirect block table
+					outFile.seekp(OFFSET*blockSize + (currentIndBlock->blockTable[indirectBlocksRead] * blockSize));
+
+					indirectBlocksRead++;
+				} else {
+					// following three lines allow us to iterate through this vector of indBlocks in the same manner we did above to the initial indBlock
+					currentIndBlock = &currentNode->doubleIndBlockTable[doubleIndirectBlocksRead];
+					indirectBlocksRead = 0;
+					doubleIndirectBlocksRead++;
+
+					continue;
+				}
+
+			
+				// go for the whole block if bytesRemaining is >= blockSize
+				bytesToWrite = min(blockSize, bytesRemaining);
+
+				if(startByte) { // adjust number of bytes we must write in this block to be contained within the block still
+					outFile.seekp(outFile.cur + startByte);
+					if(bytesToWrite + startByte > blockSize) {
+						bytesToWrite = blockSize - startByte;
+					}
+
+					startByte = 0; // we've already used this by this point
+				}
+
+				bytesRemaining -= bytesToWrite;
+
+				// finally, write to the block
+				for(int i = 0; i < bytesToWrite; i++) {
+					outFile.write(&ch, sizeof(ch));
+					outFile.seekp(outFile.cur + 1);
+				}
+			}
+		}
+
+		cout << endl; // spacing after all of the data has been put out with no endls between
+
+		outFile.close();
+	} else { // file was not found in the list
+		cerr << ssfsFName << " was not found in the disk" << endl;
+	}
 }
 
 void fileSystem::read(string ssfsFName, int startByte, int numBytes){
-	
+	//find iNode in iNodeList
+	int iNodeIndex;
+	for(iNodeIndex = 0; iNodeIndex<256; iNodeIndex++)
+		if(iNodeList[iNodeIndex].getFileName() == ssfsFName)
+			break;
+
+	if(iNodeIndex < 256) {
+		ifstream diskFile;
+		diskFile.open(diskName, ios::binary | ios::in);
+
+		int bytesRemaining = numBytes; // keeps track of how many bytes we still need to read out
+		int directBlocksRead = 0; // keep track of the 12 blocks we must iterate through first
+		int indirectBlocksRead = 0; // keep track of how many blocks we've read from the current indirect block being pointed to (changes once we enter double indirect blocks)
+		int doubleIndirectBlocksRead = 0; // keep track of what # indirect block we should be looking at from the doubleIndBlock vector in currentNode
+		int bytesToRead; // will determine how many bytes we read below after seeking to the correct position in the file
+		iNode* currentNode = &iNodeList[iNodeIndex]; // store this indexed value just because it gets referenced so often below
+		indBlock* currentIndBlock = &currentNode->ib; // start off with the single indirect block assigned to this inode
+		// after reading this first indBlock, this value will iterate through the list of indBlocks in the doubleIndBlockPtr vector of indBlocks
+
+		while(bytesRemaining > 0 && doubleIndirectBlocksRead < currentNode->doubleIndBlockTable.size()) {
+			if(startByte >= blockSize) { // skip over the whole read process if the startByte is further than the upcoming block's end point
+				startByte -= blockSize;
+
+				if(directBlocksRead < 12) directBlocksRead++;
+				else if(indirectBlocksRead < currentIndBlock->blockTable.size()) indirectBlocksRead++;
+				else doubleIndirectBlocksRead++;
+
+				continue;
+			} else {
+				if(directBlocksRead < 12) { // seek to next entry in direct block table
+					diskFile.seekg(OFFSET*blockSize + startByte + (currentNode->blockAddressTable[directBlocksRead] * blockSize));
+
+					directBlocksRead++;
+				} else if(indirectBlocksRead < currentIndBlock->blockTable.size()){ // seek to the next entry in indirect block table
+					diskFile.seekg(OFFSET*blockSize + startByte + (currentIndBlock->blockTable[indirectBlocksRead] * blockSize));
+
+					indirectBlocksRead++;
+				} else {
+					// following three lines allow us to iterate through this vector of indBlocks in the same manner we did above to the initial indBlock
+					currentIndBlock = &currentNode->doubleIndBlockTable[doubleIndirectBlocksRead];
+					indirectBlocksRead = 0;
+					doubleIndirectBlocksRead++;
+
+					continue;
+				}
+
+				if(startByte) startByte = 0; // we've already used this by this point
+
+				// go for the whole block if bytesRemaining is >= blockSize
+				bytesToRead = min(blockSize, bytesRemaining);
+				bytesRemaining -= bytesToRead;
+
+				// read min(remaining bytes, blockSize) data
+				char* data = new char[bytesToRead];
+				diskFile.read(data, bytesToRead);
+
+				// print the data we read in from file
+				cout << data;
+			}
+		}
+
+		cout << endl; // spacing after all of the data has been put out with no endls between
+
+		diskFile.close();
+	} else { // file was not found in the list
+		cerr << ssfsFName << " was not found in the disk" << endl;
+	}
 }
 
 

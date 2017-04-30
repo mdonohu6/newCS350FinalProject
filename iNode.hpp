@@ -11,13 +11,15 @@
 
 #include <stdio.h>
 #include <string>
+#include <cstring>
 #include <vector>
 
 struct indBlock{
 	
 	int pointer;
 	std::vector<int> blockTable;
-	
+	/* we need to add a check that every time an entry is added to blockTable,
+	that blockTable.size() does not exceed indBlockSize */
 };
 
 

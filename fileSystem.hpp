@@ -14,6 +14,7 @@
 #include <fstream>
 #include <vector>
 #include <string>
+#include <cstring>
 #include "iNode.hpp"
 #include "math.h"
 
@@ -47,7 +48,7 @@ class fileSystem{
     
 public:
     //Constructors
-    fileSystem(std::string diskName);
+    fileSystem(std::string fileName);
 	
     
     void create(std::string ssfsFName);
@@ -71,8 +72,8 @@ private:
 	int blockSize;
 	int offset;
 	
+	string diskName;
 
-	
 };
 
 
