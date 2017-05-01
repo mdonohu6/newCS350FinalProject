@@ -22,19 +22,17 @@ struct Superblock{
 
 
 fileSystem::fileSystem(string fileName){
-	diskName = fileName;
 
+	diskName = fileName;
+	
+	
 	ifstream ifs;	
-	ifs.open(diskName, ios::in | ios::binary);
+	ifs.open(fileName, ios::in | ios::binary);
 
 	Superblock blank;
 
 	ifs.read(reinterpret_cast<char*>(&blank),sizeof(Superblock));
 
-	cout << "reading from file, Superblock has numBlocks = " << blank.numBlocks << endl;
-	cout << "reading from file, Superblock has blockSize = " << blank.blockSize << endl;
-
-	offset = blank.offset;
 	numBlocks = blank.numBlocks;
 	blockSize = blank.numBlocks;
 	
@@ -43,12 +41,12 @@ fileSystem::fileSystem(string fileName){
 	
 	
 	//the number of block pointers you can fit in an indirect block
-	indBlockSize = blockSize / log2(numBlocks);
+	indBlockSize = blockSize / 4;
 	
 	
 	
 	//the number of indirect block pointers you can fit in a double indirect block
-	doubleIndSize = blockSize / log2(numBlocks);
+	doubleIndSize = blockSize / 4;
 
 	
 	freeBlockList = new bool[numBlocks];
@@ -93,7 +91,9 @@ void fileSystem::create(string ssfsFName){
 }
 void fileSystem::import(string ssfsFName, string unixFName){
 
-	
+	ofstream diskFile;
+	diskFile.open(diskName, ios::out | ios::binary);
+
 	
 	ifstream unixFile;
 	unixFile.open(unixFName, ios::binary | ios::in);
@@ -142,9 +142,13 @@ void fileSystem::import(string ssfsFName, string unixFName){
 					iNodeList[iNodeIndex].blockAddressTable[blocksInFile] = blockNum;
 					
 					
-					//TODO: Write toBeWritten to ( offset + (blockNum * blockSize))
-					
-					
+					//TODO: Write toBeWritten to ( (offset + blockNum)* blockSize)
+					diskFile.seekp((OFFSET+blockNum)*blockSize);
+				
+					cout<<diskFile.tellp()<<endl;
+
+					diskFile.write(toBeWritten,blockSize);
+
 					
 					
 				}
@@ -170,7 +174,8 @@ void fileSystem::import(string ssfsFName, string unixFName){
 				
 					iNodeList[iNodeIndex].ib.blockTable.push_back(blockNum);
 					
-					//TODO Write toBeWritten to ( offset + (blockNum * blockSize))
+					diskFile.seekp((OFFSET+blockNum)*blockSize);
+					diskFile.write(toBeWritten,blockSize);
 
 					
 					
@@ -220,7 +225,9 @@ void fileSystem::import(string ssfsFName, string unixFName){
 					(iNodeList[iNodeIndex].doubleIndBlockTable.front()).blockTable.push_back(blockNum);
 	
 					
-					//TODO Write toBeWritten to ( offset + (blockNum * blockSize))
+					diskFile.seekp((OFFSET+blockNum)*blockSize);
+					diskFile.write(toBeWritten,blockSize);
+					
 				}
 				
 				break;
@@ -228,11 +235,18 @@ void fileSystem::import(string ssfsFName, string unixFName){
 		}
 		
 	}
+	unixFile.close();
+	diskFile.close();
 }
 
 
 // if this is not working, read the comments in second for loop below -- most likely cause of problems
 void fileSystem::cat(string ssfsFName){
+	
+	
+	cout<<"CAT "<<ssfsFName<<endl;
+	
+	
 	//find iNode in iNodeList
 	int iNodeIndex;
 	for(iNodeIndex = 0; iNodeIndex<256; iNodeIndex++)

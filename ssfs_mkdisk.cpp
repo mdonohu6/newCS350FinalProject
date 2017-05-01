@@ -13,6 +13,7 @@
 #include <string>
 #include <stdlib.h>
 
+
 using namespace std;
 
 struct Superblock{
@@ -23,6 +24,10 @@ struct Superblock{
 	
 };
 
+
+
+
+#define OFFSET 259
 
 
 /*
@@ -94,7 +99,7 @@ int main(int argc, char** argv){
 	sb.hasFiles = 0;
 	sb.numBlocks = numBlocks;
 	sb.blockSize = blockSize;
-	sb.offset = 258 * blockSize;
+	sb.offset = 259 * blockSize;
 
 	// write the entire superblock to the disk file
 	ofs.write(reinterpret_cast<char*>(&sb), sizeof(Superblock));
@@ -107,7 +112,7 @@ int main(int argc, char** argv){
 	// this for loop seeks to the point right after the very 
 	// first block (which contains the superblock)
 	// and writes z's into the file
-	for (int i = blockSize; i < (numBlocks + 258) * blockSize; i++) {
+	for (int i = blockSize; i < (numBlocks + 259) * blockSize; i++) {
 		if( i < (numBlocks * blockSize -1)) {
 			// fill whole file with z's
 			ofs.seekp(i);

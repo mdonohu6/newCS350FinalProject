@@ -25,7 +25,6 @@ void split(string in, vector<string> &out){
 		out.push_back(tempString);
 	}
 	
-	cerr << "Here" << endl;
 
 }
 void parseInputFile(char* diskName, char* fName){
@@ -37,7 +36,7 @@ void parseInputFile(char* diskName, char* fName){
 	vector <string> command_split;
 	
 	fileSystem fileSys(diskName);
-	cout<<"here"<<endl;
+
 	while(!input.eof()){
 		
 		string ssfsFName, unixFName;
