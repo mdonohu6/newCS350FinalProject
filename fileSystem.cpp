@@ -10,6 +10,8 @@
 using namespace std;
 
 #define OFFSET 259
+#define FREE_INODE_LIST_OFFSET 258
+#define FREE_BLOCK_LIST_OFFSET 257
 
 struct Superblock{
 	int numBlocks;
@@ -18,6 +20,17 @@ struct Superblock{
 	int hasFiles;
 	
 };
+
+
+
+int getFileSize(string fName){
+	int fSize;
+	
+	
+	
+	return fSize;
+}
+
 
 
 
@@ -34,7 +47,7 @@ fileSystem::fileSystem(string fileName){
 	ifs.read(reinterpret_cast<char*>(&blank),sizeof(Superblock));
 
 	numBlocks = blank.numBlocks;
-	blockSize = blank.numBlocks;
+	blockSize = blank.blockSize;
 	
 	
 	
@@ -95,11 +108,8 @@ void fileSystem::import(string ssfsFName, string unixFName){
 	diskFile.open(diskName, ios::in | ios::out | ios::binary | ios::ate);
 
 	
-	ifstream unixFile;
-	unixFile.open(unixFName, ios::binary | ios::in);
 	
-	// TODO: check to make sure file isnt too big
-
+	// TODO: determine file size and set inode.filesize
 	
 	
 
@@ -108,9 +118,17 @@ void fileSystem::import(string ssfsFName, string unixFName){
 	for(iNodeIndex = 0; iNodeIndex<256; iNodeIndex++)
 		if(iNodeList[iNodeIndex].getFileName() == ssfsFName)
 			break;
-	
-	
-	
+
+
+	iNodeList[iNodeIndex].fSize = getFileSize(unixFName);
+
+											  
+											  
+	ifstream unixFile;
+	unixFile.open(unixFName, ios::binary | ios::in);
+		  
+											  
+									
 	char toBeWritten[blockSize];
 	
 	//used to keep track of file size
@@ -254,9 +272,11 @@ void fileSystem::cat(string ssfsFName){
 			break;
 
 	if(iNodeIndex < 256) {
+		cout<<"in"<<endl;
 		ifstream diskFile;
 		diskFile.open(diskName, ios::binary | ios::in | ios::out);
 
+		int bytesRead = 0;
 		int directBlocksRead = 0; // keep track of the 12 blocks we must iterate through first
 		int indirectBlocksRead = 0; // keep track of how many blocks we've read from the current indirect block being pointed to (changes once we enter double indirect blocks)
 		int doubleIndirectBlocksRead = 0; // keep track of what # indirect block we should be looking at from the doubleIndBlock vector in currentNode
@@ -264,11 +284,15 @@ void fileSystem::cat(string ssfsFName){
 		indBlock* currentIndBlock = &currentNode->ib; // start off with the single indirect block assigned to this inode
 		// after reading this first indBlock, this value will iterate through the list of indBlocks in the doubleIndBlockPtr vector of indBlocks
 
-		while(doubleIndirectBlocksRead < currentNode->doubleIndBlockTable.size()) {
+		while(bytesRead < currentNode->fSize) {
+			bytesRead++;
+			
+			
 			if(directBlocksRead < 12) { // seek to next entry in direct block table
 				if(currentNode->blockAddressTable[directBlocksRead] == -1) break;
 
-				diskFile.seekg(OFFSET*blockSize + (currentNode->blockAddressTable[directBlocksRead] * blockSize));
+				diskFile.seekg((OFFSET + currentNode->blockAddressTable[directBlocksRead])* blockSize);
+				cout<<(OFFSET + currentNode->blockAddressTable[directBlocksRead])<<endl;
 
 				directBlocksRead++;
 			} else if(indirectBlocksRead < currentIndBlock->blockTable.size()){ // seek to the next entry in indirect block table
@@ -456,7 +480,7 @@ void fileSystem::read(string ssfsFName, int startByte, int numBytes){
 
 	if(iNodeIndex < 256) {
 		ifstream diskFile;
-		diskFile.open(diskName, ios::binary | ios::in);
+		diskFile.open(diskName, ios::binary | ios::in | ios::out);
 
 		int bytesRemaining = numBytes; // keeps track of how many bytes we still need to read out
 		int directBlocksRead = 0; // keep track of the 12 blocks we must iterate through first
@@ -526,11 +550,94 @@ string fileSystem::list(){
 			fileList +=( iNodeList[i].getFileName() + (string)"\n");
 		   
 	}
-
 	return fileList;
 }
 
 
 void fileSystem::shutdown(){
+
+	ofstream diskFile;
+	diskFile.open(diskName, ios::in | ios::out | ios::binary | ios::ate);
+
+	//MARK: Maybe write superblock out to file, just to be safe
+	
+	
+	
+	for(int i=0; i<256; i++){
+		if(freeiNodeList[i]){
+			diskFile.seekp((1+i)*blockSize);
+
+			//TODO: write out all inode information to disk in an easy to parse format
+		}
+	}
+	
+
+	
+	
+	diskFile.seekp((FREE_BLOCK_LIST_OFFSET)*blockSize);
+
+	//Write freeBlockList out to disk
+	for(int i=0; i<numBlocks; i++){
+		if(freeBlockList[i])
+			diskFile.write("1",sizeof(char));
+		else
+			diskFile.write("0",sizeof(char));
+
+	}
+	
+	
+	//TODO: Write freeInodeList out to disk
+	diskFile.seekp((FREE_INODE_LIST_OFFSET)*blockSize);
+	for(int i=0; i<256; i++){
+		if(freeiNodeList[i])
+			diskFile.write("1",sizeof(char));
+		else
+			diskFile.write("0",sizeof(char));
+		
+	}
+	
+	
+	
+	diskFile.close();
 	
 }
+
+
+
+/*
+ _______________________________
+ |								|
+ |			Superblock			|
+ |  							|
+ |	int:numBlocks				|	<-----  size: 1 block
+ |	int:blockSize				|
+ |	int:offset					|
+ |	int:hasFiles				|
+ |______________________________|
+ |								|
+ |			iNodeList			|   <----- size: 256 blocks
+ |								|
+ |______________________________|
+ |								|
+ |			freeBlockList		|   <----- size: 1 block
+ |______________________________|
+ |								|
+ |			freeiNodeList		|   <----- size: 1 block
+ |								|
+ |------------------------------|	<-------
+ |								|			|
+ |								|			|_______ offset points here
+ |								|
+ |								|
+ |								|
+ |			mainMemory			|	<----- size: numBlocks*blockSize bytes
+ |								|
+ |								|
+ |								|
+ |								|
+ |								|
+ |								|
+ |______________________________|
+
+ 
+ */
