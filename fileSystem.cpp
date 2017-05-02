@@ -24,11 +24,15 @@ struct Superblock{
 
 
 int getFileSize(string fName){
-	int fSize;
+	std::streampos fsize = 0;
+	std::ifstream file( fName, std::ios::binary );
 	
-	
-	
-	return fSize;
+	fsize = file.tellg();
+	file.seekg( 0, std::ios::end );
+	fsize = file.tellg() - fsize;
+	file.close();
+	cout<<"file size is "<<fsize<<" bytes"<<endl;
+	return fsize;
 }
 
 
@@ -107,10 +111,7 @@ void fileSystem::import(string ssfsFName, string unixFName){
 	ofstream diskFile;
 	diskFile.open(diskName, ios::in | ios::out | ios::binary | ios::ate);
 
-	
-	
-	// TODO: determine file size and set inode.filesize
-	
+
 	
 
 	//find index in iNodeList where ssfs file is
@@ -123,30 +124,45 @@ void fileSystem::import(string ssfsFName, string unixFName){
 	iNodeList[iNodeIndex].fSize = getFileSize(unixFName);
 
 											  
-											  
+	//open the unix file
 	ifstream unixFile;
 	unixFile.open(unixFName, ios::binary | ios::in);
 		  
-											  
+	
+	
+	
+	
+	
 									
 	char toBeWritten[blockSize];
 	
 	//used to keep track of file size
-	int blocksInFile = 0;
+	int blocksRead = 0;
 	
 	
 	
 	
-	
+	//MARK: Need to use fileSize instead of .eof
 	while(!unixFile.eof()){
 		
-		blocksInFile++;
+		blocksRead++;
 		
 		//read 1 block of data from unixFile
+		cout<<"blockSize: "<<blockSize<<endl;
+	
+		
+		
+		
+		
+		//MARK: BUG!!!! reads blockSize/2 bytes instead of blockSize
+
 		unixFile.read(toBeWritten,blockSize);
 		
+		cout<<"toBeWritten "<<toBeWritten<<";"<<endl;
 		
 		
+		
+	
 		for(int blockNum = 0; blockNum<numBlocks; blockNum++){
 		
 			
@@ -155,12 +171,12 @@ void fileSystem::import(string ssfsFName, string unixFName){
 				
 				freeBlockList[blockNum] = 1;
 				
-				if(blocksInFile < 12){ //direct blocks
+				if(blocksRead < 12){ //direct blocks
 					
-					iNodeList[iNodeIndex].blockAddressTable[blocksInFile] = blockNum;
+					iNodeList[iNodeIndex].blockAddressTable[blocksRead] = blockNum;
 					
 					
-					//TODO: Write toBeWritten to ( (offset + blockNum)* blockSize)
+					//Write toBeWritten to ( (offset + blockNum)* blockSize)
 					diskFile.seekp((OFFSET+blockNum)*blockSize);
 				
 					cout<<diskFile.tellp()<<endl;
@@ -170,17 +186,17 @@ void fileSystem::import(string ssfsFName, string unixFName){
 					
 					
 				}
-				else if(blocksInFile < indBlockSize){ //single indirect block pointer
+				else if(blocksRead < indBlockSize){ //single indirect block pointer
 				
 					
 					
 					
-					if(blocksInFile == 12){ // on 13th block need to make indirect block
+					if(blocksRead == 12){ // on 13th block need to make indirect block
 						
 						for (int i = 0; i<numBlocks; i++) {
 							if(freeBlockList[i] ==0){
 								freeBlockList[i] = 1;
-								iNodeList[iNodeIndex].ib.pointer = blockNum;
+								iNodeList[iNodeIndex].ib.pointer = i;
 								
 								break;
 							}
@@ -202,24 +218,19 @@ void fileSystem::import(string ssfsFName, string unixFName){
 				else{	//double indirect block pointer
 
 
-					if(blocksInFile == doubleIndSize){// need to make double indirect block
+					if(blocksRead == indBlockSize){// need to make double indirect block
 						
 						for (int i = 0; i<numBlocks; i++){
 							if(freeBlockList[i] ==0){
 								freeBlockList[i] = 1;
-								iNodeList[iNodeIndex].doubleIndBlock = blockNum;
+								iNodeList[iNodeIndex].doubleIndBlock = i;
 								break;
 							}
 						}
 					}
+
 					
-					
-					
-					
-					
-					
-					
-					int currentBlock = blocksInFile - doubleIndSize;
+					int currentBlock = blocksRead - indBlockSize;
 					
 					if(currentBlock % indBlockSize == 0){ //when an indirect block is filled we create another
 						
@@ -228,7 +239,7 @@ void fileSystem::import(string ssfsFName, string unixFName){
 
 								freeBlockList[i] = 1;
 							
-								
+								//MARK: might have  to be dynamically allocated?
 								indBlock newIB;
 								newIB.pointer = i;
 
@@ -394,6 +405,7 @@ void fileSystem::del(string ssfsFName){
 }
 
 void fileSystem::write(string ssfsFName, char ch, int startByte, int numBytes){
+	
 	//find iNode in iNodeList
 	int iNodeIndex;
 	for(iNodeIndex = 0; iNodeIndex<256; iNodeIndex++)
