@@ -138,6 +138,9 @@ int main(int argc, char **argv){
 		cout<<"./ssfs <disk-name> <input1> <input2> <input3>"<<endl;
 		return 1;
 	}
+		// call parseInputFile
+		// argv[1] is DISK file name
+		// argv[2] is name of input file that contains file instructions
     else parseInputFile(argv[1],argv[2]);
 	
 	return 0;
