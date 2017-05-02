@@ -597,7 +597,7 @@ void fileSystem::shutdown(){
 	}
 	
 	
-	//TODO: Write freeInodeList out to disk
+	//Write freeInodeList out to disk
 	diskFile.seekp((FREE_INODE_LIST_OFFSET)*blockSize);
 	for(int i=0; i<256; i++){
 		if(freeiNodeList[i])
@@ -650,5 +650,19 @@ void fileSystem::shutdown(){
  |								|
  |______________________________|
 
+ 
+ _______________________________________
+|			iNode						|
+|										|
+|	string: fName						|
+|										|
+|	int[12]: blockAddressTable			|
+|										|
+|	int indBlockPointer					|
+|										|
+|	int doubleIndBlockPointer			|
+|										|
+|										|
+|_______________________________________|
  
  */
