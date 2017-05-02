@@ -7,6 +7,11 @@
 //
 
 #include "fileSystem.hpp"
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 using namespace std;
 
 #define OFFSET 259
@@ -111,26 +116,27 @@ void fileSystem::create(string ssfsFName){
 }
 void fileSystem::import(string ssfsFName, string unixFName){
 
-	ofstream diskFile;
-	diskFile.open(diskName, ios::in | ios::out | ios::binary | ios::ate);
-
-
 	
-
 	//find index in iNodeList where ssfs file is
 	int iNodeIndex;
 	for(iNodeIndex = 0; iNodeIndex<256; iNodeIndex++)
 		if(iNodeList[iNodeIndex].getFileName() == ssfsFName)
 			break;
-
-
+	
+	//set file size
 	iNodeList[iNodeIndex].fSize = getFileSize(unixFName);
 
-											  
+	
+	
+	
+	//open the disk file
+	FILE* diskFile = fopen(diskName.c_str(), "w");
+
+	
+	
+	
 	//open the unix file
-	ifstream unixFile;
-	unixFile.open(unixFName, ios::binary | ios::in);
-		  
+	FILE* unixFile = fopen(unixFName.c_str(), "r");
 	
 	
 	
@@ -141,59 +147,52 @@ void fileSystem::import(string ssfsFName, string unixFName){
 	
 	//used to keep track of file size
 	int blocksRead = 0;
+	int bytesRead = 0;
 	
 	
+	
+	int bytesToWrite = blockSize;
 	
 	
 	//MARK: Need to use fileSize instead of .eof
-	while(!unixFile.eof()){
-		
-		blocksRead++;
-		
-		//read 1 block of data from unixFile
-		cout<<"blockSize: "<<blockSize<<endl;
-	
-		
-		
-		
-		
-		//MARK: BUG!!!! reads blockSize/2 bytes instead of blockSize
-
-		unixFile.read(toBeWritten,blockSize);
-		
-		cout<<"toBeWritten "<<toBeWritten<<";"<<endl;
-		
+	while(bytesRead != iNodeList[iNodeIndex].fSize){
 		
 		
 	
-		for(int blockNum = 0; blockNum<numBlocks; blockNum++){
-		
+												 								
+		if(iNodeList[iNodeIndex].fSize - bytesRead < blockSize) 
+			bytesToWrite = iNodeList[iNodeIndex].fSize - bytesRead;
 			
+		
+		fread(toBeWritten,sizeof(char), bytesToWrite, unixFile);
+		
+		bytesRead += bytesToWrite;
+
+		for(int blockNum = 0; blockNum<numBlocks; blockNum++){
 			//find free block in freeBlockList
 			if(freeBlockList[blockNum] == 0){
-				
 				freeBlockList[blockNum] = 1;
+				
+				
+				
+				
 				
 				if(blocksRead < 12){ //direct blocks
 					
 					iNodeList[iNodeIndex].blockAddressTable[blocksRead] = blockNum;
-					
-					
+		
 					//Write toBeWritten to ( (offset + blockNum)* blockSize)
-					diskFile.seekp((OFFSET+blockNum)*blockSize);
-				
-					cout<<diskFile.tellp()<<endl;
-
-					diskFile.write(toBeWritten,blockSize);
-
-					
-					
+					fseek(diskFile,(OFFSET+blockNum)*blockSize, 0);
+					fwrite(toBeWritten,sizeof(char),bytesToWrite,diskFile);
 				}
-				else if(blocksRead < indBlockSize){ //single indirect block pointer
 				
-					
-					
-					
+				
+				
+				
+				
+				
+				else if(blocksRead < indBlockSize){ //single indirect block pointer
+
 					if(blocksRead == 12){ // on 13th block need to make indirect block
 						
 						for (int i = 0; i<numBlocks; i++) {
@@ -210,9 +209,10 @@ void fileSystem::import(string ssfsFName, string unixFName){
 					
 				
 					iNodeList[iNodeIndex].ib.blockTable.push_back(blockNum);
+
 					
-					diskFile.seekp((OFFSET+blockNum)*blockSize);
-					diskFile.write(toBeWritten,blockSize);
+					fseek(diskFile,(OFFSET+blockNum)*blockSize, 0);
+					fwrite(toBeWritten,sizeof(char),bytesToWrite,diskFile);
 
 					
 					
@@ -257,18 +257,22 @@ void fileSystem::import(string ssfsFName, string unixFName){
 					(iNodeList[iNodeIndex].doubleIndBlockTable.front()).blockTable.push_back(blockNum);
 	
 					
-					diskFile.seekp((OFFSET+blockNum)*blockSize);
-					diskFile.write(toBeWritten,blockSize);
+					fseek(diskFile,(OFFSET+blockNum)*blockSize, 0);
+					fwrite(toBeWritten,sizeof(char),bytesToWrite,diskFile);
+
+					
 					
 				}
+				blocksRead++;
+
 				
 				break;
 			}
 		}
 		
 	}
-	unixFile.close();
-	diskFile.close();
+	fclose(unixFile);
+	fclose(diskFile);
 }
 
 
@@ -284,9 +288,9 @@ void fileSystem::cat(string ssfsFName){
 	for(iNodeIndex = 0; iNodeIndex<256; iNodeIndex++)
 		if(iNodeList[iNodeIndex].getFileName() == ssfsFName)
 			break;
+	
 
 	if(iNodeIndex < 256) {
-		cout<<"in"<<endl;
 		ifstream diskFile;
 		diskFile.open(diskName, ios::binary | ios::in | ios::out);
 
@@ -294,49 +298,40 @@ void fileSystem::cat(string ssfsFName){
 		int directBlocksRead = 0; // keep track of the 12 blocks we must iterate through first
 		int indirectBlocksRead = 0; // keep track of how many blocks we've read from the current indirect block being pointed to (changes once we enter double indirect blocks)
 		int doubleIndirectBlocksRead = 0; // keep track of what # indirect block we should be looking at from the doubleIndBlock vector in currentNode
-		iNode* currentNode = &iNodeList[iNodeIndex]; // store this indexed value just because it gets referenced so often below
-		indBlock* currentIndBlock = &currentNode->ib; // start off with the single indirect block assigned to this inode
 		// after reading this first indBlock, this value will iterate through the list of indBlocks in the doubleIndBlockPtr vector of indBlocks
+	
+		
+		
+		char buf[blockSize];
+		
+		int bytesToRead = blockSize;
 
-		while(bytesRead < currentNode->fSize) {
-			bytesRead++;
-			
+		while(bytesRead < iNodeList[iNodeIndex].fSize) {
+		
+			if(iNodeList[iNodeIndex].fSize - bytesRead < blockSize)
+				bytesToRead = iNodeList[iNodeIndex].fSize - bytesRead;
+
+			bytesRead+= bytesToRead;
 			
 			if(directBlocksRead < 12) { // seek to next entry in direct block table
-				if(currentNode->blockAddressTable[directBlocksRead] == -1) break;
-
-				diskFile.seekg((OFFSET + currentNode->blockAddressTable[directBlocksRead])* blockSize);
-				cout<<(OFFSET + currentNode->blockAddressTable[directBlocksRead])<<endl;
-
-				directBlocksRead++;
-			} else if(indirectBlocksRead < currentIndBlock->blockTable.size()){ // seek to the next entry in indirect block table
-				if(currentIndBlock->blockTable[indirectBlocksRead] == -1) break;
-
-				diskFile.seekg(OFFSET*blockSize + (currentIndBlock->blockTable[indirectBlocksRead] * blockSize));
-
-				indirectBlocksRead++;
-			} else {
-				// following three lines allow us to iterate through this vector of indBlocks in the same manner we did above to the initial indBlock
-				currentIndBlock = &currentNode->doubleIndBlockTable[doubleIndirectBlocksRead];
-				indirectBlocksRead = 0;
-				doubleIndirectBlocksRead++;
-
-				continue;
-			}
-
-			char buf;
-			for(int i = 0; i < blockSize; i++) {
-				diskFile.read(&buf, 1); // read one char at a time because we need to identify when we reach the end of the file
-				diskFile.seekg(diskFile.cur + 1); // move read pointer to next char in file
-				if(buf == '\0') { // *IMPORTANT* \0 acting as a placeholder for whatever the file will be populated with as empty space
-					// acting as a sentinel since break will only leave the for loop
-					doubleIndirectBlocksRead = currentNode->doubleIndBlockTable.size();
-
+				if(iNodeList[iNodeIndex].blockAddressTable[directBlocksRead] == -1){
+					cout<<bytesRead<<"breaking"<<endl;
 					break;
 				}
 
-				cout << buf;
+				diskFile.seekg((OFFSET + iNodeList[iNodeIndex].blockAddressTable[directBlocksRead])* blockSize);
+				diskFile.read(buf, bytesToRead);
+				if(bytesToRead < blockSize){
+					buf[bytesToRead] = '\0';
+				}
+				cout<<buf<<endl;
+
+				directBlocksRead++;
 			}
+			else{
+				cout<<"too big"<<endl;
+			}
+		
 		}
 
 		cout << endl; // spacing after all of the data has been put out with no endls between
@@ -345,6 +340,7 @@ void fileSystem::cat(string ssfsFName){
 	} else { // file was not found in the list
 		cerr << ssfsFName << " was not found in the disk" << endl;
 	}
+ 
 }
 
 void fileSystem::del(string ssfsFName){
