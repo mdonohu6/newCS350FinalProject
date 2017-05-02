@@ -117,7 +117,7 @@ int main(int argc, char** argv){
 	// first block (which contains the superblock)
 	// and writes z's into the file
 	for (int i = blockSize; i < (numBlocks + 259) * blockSize; i++) {
-		if( i < (numBlocks * blockSize -1)) {
+		if( i < ((numBlocks + 259) * blockSize -1)) {
 			// fill whole file with z's
 			ofs.seekp(i);
 			ofs.write(junk, sizeof(char));

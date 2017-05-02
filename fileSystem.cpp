@@ -42,30 +42,32 @@ fileSystem::fileSystem(string fileName){
 
 	diskName = fileName;
 	
-	
+	// open up the disk file for reading
 	ifstream ifs;	
 	ifs.open(fileName, ios::in | ios::binary);
 
 	Superblock blank;
-
 	ifs.read(reinterpret_cast<char*>(&blank),sizeof(Superblock));
 
+	// set numBlocks and blockSize by reading this info from the 
+	// Superblock that is currently written in the disk file
+	// at this point the Superblock is the only thing of importance that is written in the file
 	numBlocks = blank.numBlocks;
 	blockSize = blank.blockSize;
 	
-	
-	
-	
-	
-	//the number of block pointers you can fit in an indirect block
+		
+	// the number of block pointers you can fit in an indirect block
+	// is the size of a block divided by the size of an int
+	// because a block pointer is just an integer which is 4 bytes
 	indBlockSize = blockSize / 4;
 	
-	
-	
-	//the number of indirect block pointers you can fit in a double indirect block
+	// the number of indirect block pointers you can fit in a double indirect block
+	// again, for us, block pointers are ints which are 4 bytes big
 	doubleIndSize = blockSize / 4;
 
-	
+	// free block is list is as big as the number of total blocks in the disk file
+	// true means this block is in use
+	// false means this block is not being used
 	freeBlockList = new bool[numBlocks];
 	
 	if(blank.hasFiles){
@@ -77,6 +79,7 @@ fileSystem::fileSystem(string fileName){
 }
 
 void fileSystem::create(string ssfsFName){
+	// store file name in tab2
     char tab2[1024];
     strncpy(tab2, ssfsFName.c_str(), sizeof(tab2));
     tab2[sizeof(tab2) - 1] = 0;
