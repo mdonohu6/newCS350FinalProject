@@ -2,3 +2,4 @@ CREATE ssfsfile.txt
 CREATE other.txt
 IMPORT ssfsfile.txt unix.txt
 CAT ssfsfile.txt
+SHUTDOWN

@@ -103,7 +103,9 @@ void parseInputFile(char* diskName, char* fName){
 			
 		}
 		else if(command_split[0] == "SHUTDOWN"){
+            cout << "inside of recognizing shutdown" << endl;
 			fileSys.shutdown();
+            cout << "after call to shutdown()" << endl;
 			
 			
 		}	

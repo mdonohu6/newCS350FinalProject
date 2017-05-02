@@ -11,6 +11,8 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <iostream>     // std::cout
+#include <fstream>      // std::ifstream
 
 using namespace std;
 
@@ -567,8 +569,11 @@ string fileSystem::list(){
 
 void fileSystem::shutdown(){
 
+    cout << " made it to shut down" << endl;
 	ofstream diskFile;
 	diskFile.open(diskName, ios::in | ios::out | ios::binary | ios::ate);
+    ifstream diskFileIFS;
+    diskFileIFS.open(diskName, ios::in | ios::binary);
 
 	//MARK: Maybe write superblock out to file, just to be safe
 	
@@ -576,7 +581,18 @@ void fileSystem::shutdown(){
 	
 	for(int i=0; i<256; i++){
 		if(freeiNodeList[i]){
+            /* WORK IN PROGRESS */
 			diskFile.seekp((1+i)*blockSize);
+            diskFile.write(reinterpret_cast<char*>(&freeiNodeList[i]), sizeof(iNode));
+            //diskFile.write(freeiNodeList[i].getFileName,sizeof(char)*32);
+            //diskFile.seekp((1+i)*blockSize + sizeof(char)*32 );
+            iNode testNode;
+            diskFileIFS.seekg((1+i) * blockSize);
+            diskFileIFS.read(reinterpret_cast<char*>(&testNode), sizeof(iNode));
+            cout << "Name: " <<testNode.fileName << endl;
+            //cout << testNode.blockAddressTable;
+            //cout << testNode.indBlockPointer;
+            cout << "We've made it this far " << endl;
 
 			//TODO: write out all inode information to disk in an easy to parse format
 		}

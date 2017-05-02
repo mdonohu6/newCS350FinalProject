@@ -21,8 +21,6 @@ struct Superblock{
 	
 };
 
-
-
 int getFileSize(string fName){
 	std::streampos fsize = 0;
 	std::ifstream file( fName, std::ios::binary );
@@ -34,9 +32,6 @@ int getFileSize(string fName){
 	cout<<"file size is "<<fsize<<" bytes"<<endl;
 	return fsize;
 }
-
-
-
 
 fileSystem::fileSystem(string fileName){
 
@@ -114,9 +109,6 @@ void fileSystem::import(string ssfsFName, string unixFName){
 	ofstream diskFile;
 	diskFile.open(diskName, ios::in | ios::out | ios::binary | ios::ate);
 
-
-	
-
 	//find index in iNodeList where ssfs file is
 	int iNodeIndex;
 	for(iNodeIndex = 0; iNodeIndex<256; iNodeIndex++)
@@ -130,12 +122,6 @@ void fileSystem::import(string ssfsFName, string unixFName){
 	//open the unix file
 	ifstream unixFile;
 	unixFile.open(unixFName, ios::binary | ios::in);
-		  
-	
-	
-	
-	
-	
 									
 	char toBeWritten[blockSize];
 	
@@ -152,10 +138,7 @@ void fileSystem::import(string ssfsFName, string unixFName){
 		
 		//read 1 block of data from unixFile
 		cout<<"blockSize: "<<blockSize<<endl;
-	
-		
-		
-		
+
 		
 		//MARK: BUG!!!! reads blockSize/2 bytes instead of blockSize
 
@@ -163,9 +146,6 @@ void fileSystem::import(string ssfsFName, string unixFName){
 		
 		cout<<"toBeWritten "<<toBeWritten<<";"<<endl;
 		
-		
-		
-	
 		for(int blockNum = 0; blockNum<numBlocks; blockNum++){
 		
 			
@@ -185,7 +165,6 @@ void fileSystem::import(string ssfsFName, string unixFName){
 					cout<<diskFile.tellp()<<endl;
 
 					diskFile.write(toBeWritten,blockSize);
-
 					
 					
 				}
@@ -207,15 +186,11 @@ void fileSystem::import(string ssfsFName, string unixFName){
 					}
 
 					
-					
-				
 					iNodeList[iNodeIndex].ib.blockTable.push_back(blockNum);
 					
 					diskFile.seekp((OFFSET+blockNum)*blockSize);
 					diskFile.write(toBeWritten,blockSize);
 
-					
-					
 				
 				}
 				else{	//double indirect block pointer
@@ -570,7 +545,7 @@ string fileSystem::list(){
 
 
 void fileSystem::shutdown(){
-
+    cout << "inside of shutdown" << endl;
 	ofstream diskFile;
 	diskFile.open(diskName, ios::in | ios::out | ios::binary | ios::ate);
 
@@ -578,9 +553,16 @@ void fileSystem::shutdown(){
 	
 	
 	
-	for(int i=0; i<256; i++){
+	for(int i = 0; i < 256; i++){
 		if(freeiNodeList[i]){
 			diskFile.seekp((1+i)*blockSize);
+            diskfile.write(reinterpret_cast<char*>(&freeiNodeList[i]), sizeof(iNode));
+            //diskFile.write(freeiNodeList[i].getFileName,sizeof(char)*32);
+            //diskFile.seekp((1+i)*blockSize + sizeof(char)*32 );
+            iNode testNode;
+            diskFile.seekg((1+i) * blockSize);
+            diskFile.read(reinterpret_cast<char*>(&testNode), sizeof(iNode));
+            cout << "We've made it this far " << endl;
 
 			//TODO: write out all inode information to disk in an easy to parse format
 		}
@@ -610,13 +592,9 @@ void fileSystem::shutdown(){
 			diskFile.write("0",sizeof(char));
 		
 	}
-	
-	
-	
 	diskFile.close();
 	
 }
-
 
 
 /*
