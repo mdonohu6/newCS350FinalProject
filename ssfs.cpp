@@ -113,6 +113,8 @@ void parseInputFile(char* diskName, char* fName){
 
 int main(int argc, char **argv){
 	
+	
+	
     ifstream input1;    // input2, input3, input4;   we'll work with one input file for now
 
 	
@@ -132,8 +134,11 @@ int main(int argc, char **argv){
         input4.open(argv[5], fstream::in);
     }
 */
-	
-    parseInputFile(argv[1],argv[2]);
+	if(argc < 3){
+		cout<<"./ssfs <disk-name> <input1> <input2> <input3>"<<endl;
+		return 1;
+	}
+    else parseInputFile(argv[1],argv[2]);
 	
 	return 0;
 

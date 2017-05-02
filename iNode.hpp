@@ -16,7 +16,7 @@
 
 struct indBlock{
 	
-	int pointer;
+	int pointer = -1;
 	std::vector<int> blockTable;
 	/* we need to add a check that every time an entry is added to blockTable,
 	that blockTable.size() does not exceed indBlockSize */

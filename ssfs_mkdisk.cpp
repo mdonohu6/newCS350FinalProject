@@ -73,7 +73,11 @@ int main(int argc, char** argv){
 	int numBlocks, blockSize;	
 	std::string fName;
 	
-	if(argc > 3)
+	if (argc < 3){
+		perror("./ssfs_mkdisk <num-blocks> <block-size> <disk-name>\n");
+		return 1;
+	}
+	else if(argc > 3)
 		fName = argv[3];
 	else
 		fName = "DISK";
@@ -137,12 +141,11 @@ int main(int argc, char** argv){
 	ofs.close();  
 
 
-
-	  if (blockSize < 128 )
+	if (blockSize < 128 )
         perror ("Block Size cannot be less than 128 bytes.");
     else if (blockSize > 512)
         perror ("Block Size cannot be greater than 512 bytes.");
-
+	
 	cout << "made it to the bottom " << endl;
     
 	//TODO

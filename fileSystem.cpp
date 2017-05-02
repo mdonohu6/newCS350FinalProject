@@ -92,7 +92,7 @@ void fileSystem::create(string ssfsFName){
 void fileSystem::import(string ssfsFName, string unixFName){
 
 	ofstream diskFile;
-	diskFile.open(diskName, ios::out | ios::binary);
+	diskFile.open(diskName, ios::in | ios::out | ios::binary | ios::ate);
 
 	
 	ifstream unixFile;
@@ -255,7 +255,7 @@ void fileSystem::cat(string ssfsFName){
 
 	if(iNodeIndex < 256) {
 		ifstream diskFile;
-		diskFile.open(diskName, ios::binary | ios::in);
+		diskFile.open(diskName, ios::binary | ios::in | ios::out);
 
 		int directBlocksRead = 0; // keep track of the 12 blocks we must iterate through first
 		int indirectBlocksRead = 0; // keep track of how many blocks we've read from the current indirect block being pointed to (changes once we enter double indirect blocks)
@@ -320,17 +320,52 @@ void fileSystem::del(string ssfsFName){
 
 
 	
+	int curBlock;
 	
+	//free all direct associated with file
+	for(int i = 0; i < 12; i++){
+		curBlock = iNodeList[iNodeIndex].blockAddressTable[i];
+		if(curBlock != -1)
+			freeBlockList[curBlock] = 0;
+	}
 	
-	//TODO: free all blocks associated with file
+	//free all indirect blocks associated with file
+	while(iNodeList[iNodeIndex].ib.blockTable.size() != 0){
+		curBlock = iNodeList[iNodeIndex].ib.blockTable.back();
+		freeBlockList[curBlock] = 0;
+		
+		iNodeList[iNodeIndex].ib.blockTable.pop_back();
+	}
+	if(iNodeList[iNodeIndex].ib.pointer != -1){
+		freeBlockList[iNodeList[iNodeIndex].ib.pointer] = 0;
+	}
+	
+	//free double indirect block
+	if(iNodeList[iNodeIndex].doubleIndBlock != -1){
+		freeBlockList[iNodeList[iNodeIndex].doubleIndBlock] = 0;
+		
+		while(iNodeList[iNodeIndex].doubleIndBlockTable.size() != 0){
+			
+			vector<int> currentIndBlock = iNodeList[iNodeIndex].doubleIndBlockTable.back().blockTable;
+			freeBlockList[iNodeList[iNodeIndex].doubleIndBlockTable.back().pointer] = 0;
+	
+			while(currentIndBlock.size() != 0){
+				curBlock = currentIndBlock.back();
+				freeBlockList[curBlock] = 0;
+				currentIndBlock.pop_back();
+			}
+			iNodeList[iNodeIndex].doubleIndBlockTable.pop_back();
 
-	
+		}
+	}
 	
 	
 	//add iNodeIndex to free list
 	freeiNodeList[iNodeIndex] = 0;
 	
 	
+	//set to default values
+	iNodeList[iNodeIndex] = iNode();
 	
 }
 
