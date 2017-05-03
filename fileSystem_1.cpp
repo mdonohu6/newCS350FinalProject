@@ -278,7 +278,7 @@ void fileSystem::import(string ssfsFName, string unixFName){
 }
 
 
-
+// if this is not working, read the comments in second for loop below -- most likely cause of problems
 void fileSystem::cat(string ssfsFName){
 	
 	
@@ -291,65 +291,62 @@ void fileSystem::cat(string ssfsFName){
 		if(iNodeList[iNodeIndex].getFileName() == ssfsFName)
 			break;
 	
-	
+
 	if(iNodeIndex < 256) {
 		ifstream diskFile;
 		diskFile.open(diskName, ios::binary | ios::in | ios::out);
-		
+
 		int bytesRead = 0;
-		int blocksRead = 0;
-		
-		int currentIndBlock = 0;
+		int blocksRead = 0; // keep track of the 12 blocks we must iterate through first
 		
 		
-		char buf[blockSize+1];
+		
+		char buf[blockSize];
 		
 		int bytesToRead = blockSize;
-		
+
 		while(bytesRead < iNodeList[iNodeIndex].fSize) {
-			
-			if((iNodeList[iNodeIndex].fSize - bytesRead) < blockSize){
+		
+			if(iNodeList[iNodeIndex].fSize - bytesRead < blockSize)
 				bytesToRead = iNodeList[iNodeIndex].fSize - bytesRead;
-			}
-			
-			bytesRead += bytesToRead;
+
+			bytesRead+= bytesToRead;
 			
 			if(blocksRead < 12) { // seek to next entry in direct block table
-				if(iNodeList[iNodeIndex].blockAddressTable[blocksRead] == -1){
+				if(iNodeList[iNodeIndex].blockAddressTable[directBlocksRead] == -1){
 					cout<<"this shouldn't happen"<<endl;
 					break;
 				}
-				
-				diskFile.seekg((OFFSET + iNodeList[iNodeIndex].blockAddressTable[blocksRead])* blockSize);
-				diskFile.read(buf, bytesToRead);
 
+				diskFile.seekg((OFFSET + iNodeList[iNodeIndex].blockAddressTable[directBlocksRead])* blockSize);
+				diskFile.read(buf, bytesToRead);
+				if(bytesToRead < blockSize){
+					buf[bytesToRead] = '\0';
+				}
+				cout<<buf<<endl;
+
+				directBlocksRead++;
 			}
-			else if(blocksRead < indBlockSize){
+			else if(blocksRead < indBlockSize)){
 				int cur = blocksRead - 12;
 				diskFile.seekg((OFFSET + iNodeList[iNodeIndex].ib.blockTable[cur])* blockSize);
 				diskFile.read(buf, bytesToRead);
-			
+
+			}
+			else if(blocksRead < indBlockSize)){
+				int cur = blocksRead - 12;
+				diskFile.seekg((OFFSET + iNodeList[iNodeIndex].ib.blockTable[cur])* blockSize);
+				diskFile.read(buf, bytesToRead);
+				
 			}
 			else{
-				int cur = blocksRead - indBlockSize;
 				
-				if(cur != 0 && cur % indBlockSize == 0)
-					currentIndBlock += 1;
-					
-				diskFile.seekg((OFFSET + iNodeList[iNodeIndex].doubleIndBlockTable[currentIndBlock].blockTable[cur%indBlockSize]) * blockSize);
-				diskFile.read(buf, bytesToRead);
-	
 			}
-			buf[bytesToRead] = '\0';
-			
-			cout<<buf;
-
-			blocksRead++;
-
+		
 		}
-		
+
 		cout << endl; // spacing after all of the data has been put out with no endls between
-		
+
 		diskFile.close();
 	}
 	
@@ -585,100 +582,60 @@ void fileSystem::shutdown(){
 
     cout << " made it to shut down" << endl;
 	ofstream diskFile;
-	diskFile.open(diskName, ios::out | ios::binary | ios::ate);
-
-	ifstream diskFileREAD;
-	diskFileREAD.open(diskName, ios::in | ios::binary);
-
+	diskFile.open(diskName, ios::in | ios::out | ios::binary | ios::ate);
     ifstream diskFileIFS;
     diskFileIFS.open(diskName, ios::in | ios::binary);
-
-	ofstream testFile;
-	testFile.open("test_file.txt", ios::out);
 
 	//MARK: Maybe write superblock out to file, just to be safe
 	
 	
-	int iNodeListSeekOffset;
-
+	
 	for(int i=0; i<256; i++){
 		if(freeiNodeList[i]){
-			// seek to the beginning of the next available iNodeList BLOCK in the file
-			iNodeListSeekOffset = (1+i) * blockSize; 
-			diskFile.seekp(iNodeListSeekOffset);
-			diskFile.write(iNodeList[i].fileName, sizeof(iNodeList[i].fileName));
-			// increment iNodeListSeekOffset by the 32 bytes it took to write the filename
-			iNodeListSeekOffset += sizeof(iNodeList[i].fileName);
-			diskFile.seekp(iNodeListSeekOffset);
+            /* WORK IN PROGRESS */
+			diskFile.seekp((1+i)*blockSize);
+            diskFile.write(reinterpret_cast<char*>(&freeiNodeList[i]), sizeof(iNode));
+            //diskFile.write(freeiNodeList[i].getFileName,sizeof(char)*32);
+            //diskFile.seekp((1+i)*blockSize + sizeof(char)*32 );
+            iNode testNode;
+            diskFileIFS.seekg((1+i) * blockSize);
+            diskFileIFS.read(reinterpret_cast<char*>(&testNode), sizeof(iNode));
+            cout << "Name: " <<testNode.fileName << endl;
+            //cout << testNode.blockAddressTable;
+            //cout << testNode.indBlockPointer;
+            cout << "We've made it this far " << endl;
 
-			// now write the file's size
-			diskFile.write(reinterpret_cast<const char*>(&iNodeList[i].fSize), sizeof(iNodeList[i].fSize));
-			iNodeListSeekOffset += sizeof(int);
-			diskFile.seekp(iNodeListSeekOffset);
-
-			for (int k = 0; k < 12; k++) {
-				diskFile.write(reinterpret_cast<char*>(&iNodeList[i].blockAddressTable[k]), sizeof(int));
-				// increment seek offset by the size of one int to get ready to write the next one 
-				// in the array
-				iNodeListSeekOffset += sizeof(int);
-				diskFile.seekp(iNodeListSeekOffset);
-			}
-
-			// now we can write the indirect block pointer number
-			diskFile.write(reinterpret_cast<char*>(&iNodeList[i].ib.pointer), sizeof(int));
-			iNodeListSeekOffset += sizeof(int);
-
-			// now we can write the double indirect block pointer
-			diskFile.write(reinterpret_cast<char*>(&iNodeList[i].doubleIndBlock), sizeof(int));
-			iNodeListSeekOffset += sizeof(int);
-
+			//TODO: write out all inode information to disk in an easy to parse format
 		}
 	}
+	
 
-
-	int freeBlockListOffset = (FREE_BLOCK_LIST_OFFSET)*blockSize;
-	diskFile.seekp(freeBlockListOffset);
+	
+	
+	diskFile.seekp((FREE_BLOCK_LIST_OFFSET)*blockSize);
 
 	//Write freeBlockList out to disk
 	for(int i=0; i<numBlocks; i++){
-		if(freeBlockList[i]) {
+		if(freeBlockList[i])
 			diskFile.write("1",sizeof(char));
-	//		freeBlockListOffset += sizeof(char);
-	//		diskFile.seekp(freeBlockListOffset);
-		} else {
+		else
 			diskFile.write("0",sizeof(char));
-	//		freeBlockListOffset += sizeof(char);
-	//	diskFile.seekp(freeBlockListOffset);
-		}
+
 	}
 	
 	
-	int freeInodeListOffset = (FREE_INODE_LIST_OFFSET)*blockSize;
-	diskFile.seekp(freeInodeListOffset);
-
 	//Write freeInodeList out to disk
+	diskFile.seekp((FREE_INODE_LIST_OFFSET)*blockSize);
 	for(int i=0; i<256; i++){
-		if(freeiNodeList[i]) {
+		if(freeiNodeList[i])
 			diskFile.write("1",sizeof(char));
-	//		freeInodeListOffset += sizeof(char);
-	//		diskFile.seekp(freeInodeListOffset);
-		}
-		else {
+		else
 			diskFile.write("0",sizeof(char));
-	//		freeInodeListOffset += sizeof(char);
-	//		diskFile.seekp(freeInodeListOffset);
-		}
 		
 	}
 	
 	
-	char* test_size = new char[4];
-	diskFileREAD.seekg((blockSize) + sizeof(iNodeList[0].fileName));
-	diskFileREAD.read(test_size, sizeof(int));
-	cout << "THE ACTUAL SIZE IS " << iNodeList[0].fSize << endl;
-	cout << "the size of the file is " << test_size << endl;
 	
-
 	diskFile.close();
 	
 }
@@ -725,8 +682,6 @@ void fileSystem::shutdown(){
 |			iNode						|
 |										|
 |	string: fName						|
-|										|
-|	int: fSize							|
 |										|
 |	int[12]: blockAddressTable			|
 |										|

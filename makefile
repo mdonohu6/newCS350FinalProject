@@ -15,10 +15,10 @@ ssfs: ssfs.o fileSystem.o iNode.o
 ssfs.o: ssfs.cpp
 	g++ -std=c++11 -g -c ssfs.cpp
 
-fileSystem.o:	fileSystem.cpp 
+fileSystem.o: fileSystem.cpp 
 	g++ -std=c++11 -g -c fileSystem.cpp
 
-iNode.o:	iNode.cpp
+iNode.o: iNode.cpp
 	g++ -std=c++11 -g -c iNode.cpp
 
 clean:
