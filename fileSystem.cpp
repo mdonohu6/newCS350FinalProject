@@ -571,7 +571,10 @@ void fileSystem::shutdown(){
 
     cout << " made it to shut down" << endl;
 	ofstream diskFile;
-	diskFile.open(diskName, ios::in | ios::out | ios::binary | ios::ate);
+	diskFile.open(diskName, ios::out | ios::binary | ios::ate);
+
+	ifstream diskFileREAD;
+	diskFileREAD.open(diskName, ios::in | ios::binary);
 
     ifstream diskFileIFS;
     diskFileIFS.open(diskName, ios::in | ios::binary);
@@ -655,7 +658,13 @@ void fileSystem::shutdown(){
 	}
 	
 	
+	char* test_size = new char[4];
+	diskFileREAD.seekg((blockSize) + sizeof(iNodeList[0].fileName));
+	diskFileREAD.read(test_size, sizeof(int));
+	cout << "THE ACTUAL SIZE IS " << iNodeList[0].fSize << endl;
+	cout << "the size of the file is " << test_size << endl;
 	
+
 	diskFile.close();
 	
 }
