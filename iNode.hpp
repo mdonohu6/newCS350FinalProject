@@ -27,18 +27,15 @@ class iNode{
 public:
     iNode();
     iNode(int, int[12], int, int, char[32]);
-	iNode(char[32]);
+		iNode(char[32]);
     char * getFileName();
     void setFileName(char* fn);
-	int blockAddressTable[12];
 
-	
-    // fileName is char arry of size 32 bytes, as specified in Program5 instructions
+
+		int blockAddressTable[12];
     int fSize;
     indBlock ib;
-	std::vector<indBlock> doubleIndBlockTable;
-
-	
+		std::vector<indBlock> doubleIndBlockTable;
     int doubleIndBlock;
     char fileName[32];
 

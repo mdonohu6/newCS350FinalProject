@@ -132,11 +132,11 @@ int main(int argc, char** argv){
 
 	ifs.seekg(0);
 
-	//Superblock blank;
-	//ifs.read(reinterpret_cast<char*>(&blank),sizeof(Superblock));
+	Superblock blank;
+	ifs.read(reinterpret_cast<char*>(&blank),sizeof(Superblock));
 
-	//cout << "reading from file, Superblock has numBlocks = " << blank.numBlocks << endl;
-	//cout << "reading from file, Superblock has blockSize = " << blank.blockSize << endl;
+	cout << "reading from file, Superblock has numBlocks = " << blank.numBlocks << endl;
+	cout << "reading from file, Superblock has blockSize = " << blank.blockSize << endl;
 	
 	ofs.close();  
 
