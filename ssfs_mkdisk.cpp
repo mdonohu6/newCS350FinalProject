@@ -121,7 +121,6 @@ int main(int argc, char** argv){
 			// fill whole file with z's
 			ofs.seekp(i);
 			ofs.write(junk, sizeof(char));
-			
 		} else {
 			// put an x in the last spot of the file
 			ofs.seekp(i);
@@ -139,7 +138,6 @@ int main(int argc, char** argv){
 	cout << "reading from file, Superblock has blockSize = " << blank.blockSize << endl;
 	
 	ofs.close();  
-
 
 	if (blockSize < 128 )
         perror ("Block Size cannot be less than 128 bytes.");
