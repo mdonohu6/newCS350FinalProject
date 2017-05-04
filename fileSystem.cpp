@@ -77,8 +77,29 @@ fileSystem::fileSystem(string fileName){
 	// false means this block is not being used
 	freeBlockList = new bool[numBlocks];
 	
+	// max file size is
+	// the TOTAL number of block pointers that we have times the blockSize
+	max_file_size = (12 + indBlockSize + (indBlockSize * indBlockSize)) * blockSize;
+
 	if(blank.hasFiles){
 
+		//seek to FREE_INODE_LIST_OFFSET
+		//read into freeINodeList
+
+		//seek to FREE_BLOCK_LIST_OFFSET
+		//read into freeBlockList
+		
+		for (int i = 0; i < 256; i++) {
+		
+			if(freeINodeList[i] == 0) continue;
+			else{
+			// so the idea here is this:
+			// see which iNodes are active by reading from the freeInodeList
+			// if freeInodeList[i] == 1 then read that i'th block Inode in the DISK FILE's
+			// information into the corresponding INodeArrayData
+			}
+			
+		}
 	}
 
 	ifs.close();
@@ -127,6 +148,10 @@ void fileSystem::import(string ssfsFName, string unixFName){
 	
 	//set file size
 	iNodeList[iNodeIndex].fSize = getFileSize(unixFName);
+	if (iNodeList[iNodeIndex].fSize > max_file_size) {
+		cerr << "user file size exceeds max file size, exiting " << endl;
+		return;
+	}
 
 	
 	
@@ -594,6 +619,16 @@ void fileSystem::shutdown(){
 	//open the unix file
 	FILE* diskFileRead = fopen(diskName.c_str(), "r");	
 
+	Superblock s;
+
+	s.offset = offset;
+	s.blockSize = blockSize;
+	s.numBlocks = numBlocks;
+	s.hasFiles = 1;
+	fseek(diskFile, 0, 0);
+	fwrite(&s, sizeof(Superblock), 1, diskFile);
+
+
 /*	ifstream diskFileREAD;
 	diskFileREAD.open(diskName, ios::in | ios::binary);
 */
@@ -709,7 +744,33 @@ void fileSystem::shutdown(){
 		}
 		
 	}
-	
+
+	// now that we've written all the meta data we need to signify to future runs of our
+	// program that data already resides on the disk, so write a 1 to the 
+
+	// superblock's 'hasFiles' variable
+
+
+
+
+/*	
+	int read_has_files = -1;
+	fseek(diskFileRead, 4*sizeof(int), 0);
+	fread(&read_has_files, sizeof(int), 1, diskFileRead); 
+	cout << "BEFORE has files is currently set to " << read_has_files << endl;
+
+	int has_files_true = 1;
+	fseek(diskFile, 4*sizeof(int), 0);
+	fwrite(&has_files_true, sizeof(int), 1, diskFile);
+	*/
+
+	Superblock test;
+
+	int new_read_has_files = -1;
+	fseek(diskFileRead, 0, 0);
+	fread(&test, sizeof(Superblock), 1, diskFileRead); 
+	cout << "AFTER has files is currently set to " << test.hasFiles << endl;
+
 
 	int read_fSize = 0;
 	char read_filename[32];

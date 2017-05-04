@@ -67,6 +67,7 @@ private:
 	
 	int indBlockSize; //the number of block numbers you can store in an indirect block
 	int doubleIndSize; // the number of indirect blocks you can store in a double indirect block
+	int max_file_size;
 	
 	int numBlocks;
 	int blockSize;
