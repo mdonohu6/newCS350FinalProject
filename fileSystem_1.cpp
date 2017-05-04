@@ -603,9 +603,6 @@ void fileSystem::shutdown(){
             cout << "Name: " <<testNode.fileName << endl;
             //cout << testNode.blockAddressTable;
             //cout << testNode.indBlockPointer;
-            cout << "We've made it this far " << endl;
-
-			//TODO: write out all inode information to disk in an easy to parse format
 		}
 	}
 	

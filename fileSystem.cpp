@@ -584,102 +584,155 @@ string fileSystem::list(){
 void fileSystem::shutdown(){
 
     cout << " made it to shut down" << endl;
-	ofstream diskFile;
+/*	ofstream diskFile;
 	diskFile.open(diskName, ios::out | ios::binary | ios::ate);
+*/
+	//open the disk file
+	// try doing shutdown using FILE object instead of ofstream object
+	FILE* diskFile = fopen(diskName.c_str(), "w");
+	
+	//open the unix file
+	FILE* diskFileRead = fopen(diskName.c_str(), "r");	
 
-	ifstream diskFileREAD;
+/*	ifstream diskFileREAD;
 	diskFileREAD.open(diskName, ios::in | ios::binary);
-
-    ifstream diskFileIFS;
-    diskFileIFS.open(diskName, ios::in | ios::binary);
-
-	ofstream testFile;
-	testFile.open("test_file.txt", ios::out);
-
+*/
 	//MARK: Maybe write superblock out to file, just to be safe
-	
-	
+		
 	int iNodeListSeekOffset;
 
 	for(int i=0; i<256; i++){
 		if(freeiNodeList[i]){
 			// seek to the beginning of the next available iNodeList BLOCK in the file
 			iNodeListSeekOffset = (1+i) * blockSize; 
-			diskFile.seekp(iNodeListSeekOffset);
+
+/*			diskFile.seekp(iNodeListSeekOffset);
 			diskFile.write(iNodeList[i].fileName, sizeof(iNodeList[i].fileName));
+*/
+
+			// seek in the FILE way
+			// don't need to seek after writing because
+			// fwrite automatically moves the file pointer by num of bytes written
+			fseek(diskFile,iNodeListSeekOffset, 0);
+			fwrite(&iNodeList[i].fileName, sizeof(char), 32, diskFile);
+
 			// increment iNodeListSeekOffset by the 32 bytes it took to write the filename
-			iNodeListSeekOffset += sizeof(iNodeList[i].fileName);
+/*			iNodeListSeekOffset += sizeof(iNodeList[i].fileName);
 			diskFile.seekp(iNodeListSeekOffset);
-
+*/
 			// now write the file's size
-			diskFile.write(reinterpret_cast<const char*>(&iNodeList[i].fSize), sizeof(iNodeList[i].fSize));
-			iNodeListSeekOffset += sizeof(int);
+/*			diskFile.write(reinterpret_cast<const char*>(&iNodeList[i].fSize), sizeof(iNodeList[i].fSize));
+*/			
+			// write the 4 byte integer fSize to the disk immediately 
+			// following the filename			
+			fwrite(&iNodeList[i].fSize, sizeof(int), 1, diskFile);
+	
+/*			iNodeListSeekOffset += sizeof(int);
 			diskFile.seekp(iNodeListSeekOffset);
-
-			for (int k = 0; k < 12; k++) {
+*/
+/*			for (int k = 0; k < 12; k++) {
 				diskFile.write(reinterpret_cast<char*>(&iNodeList[i].blockAddressTable[k]), sizeof(int));
+*/
+			// don't need to use the loop with fwrite because we can write the whole
+			// block address array by writing 12 ints at once
+			fwrite(&iNodeList[i].blockAddressTable, sizeof(int), 12, diskFile);
 				// increment seek offset by the size of one int to get ready to write the next one 
 				// in the array
-				iNodeListSeekOffset += sizeof(int);
+/*				iNodeListSeekOffset += sizeof(int);
 				diskFile.seekp(iNodeListSeekOffset);
 			}
+*/
 
 			// now we can write the indirect block pointer number
-			diskFile.write(reinterpret_cast<char*>(&iNodeList[i].ib.pointer), sizeof(int));
-			iNodeListSeekOffset += sizeof(int);
+			fwrite(&iNodeList[i].ib.pointer, sizeof(int), 1, diskFile);
 
+/*			diskFile.write(reinterpret_cast<char*>(&iNodeList[i].ib.pointer), sizeof(int));
+			iNodeListSeekOffset += sizeof(int);
+*/
 			// now we can write the double indirect block pointer
-			diskFile.write(reinterpret_cast<char*>(&iNodeList[i].doubleIndBlock), sizeof(int));
-			iNodeListSeekOffset += sizeof(int);
+			fwrite(&iNodeList[i].doubleIndBlock, sizeof(int), 1, diskFile);
 
+/*			diskFile.write(reinterpret_cast<char*>(&iNodeList[i].doubleIndBlock), sizeof(int));
+			iNodeListSeekOffset += sizeof(int);
+*/
 		}
 	}
 
-
+	// now we want to write teh free block list to the disk file
+	// so seek to the write block 
 	int freeBlockListOffset = (FREE_BLOCK_LIST_OFFSET)*blockSize;
-	diskFile.seekp(freeBlockListOffset);
+	fseek(diskFile,freeBlockListOffset, 0);
 
+/*	diskFile.seekp(freeBlockListOffset);
+*/
 	//Write freeBlockList out to disk
+	char one[] = {'1'}; 
+	int zero[] = {'0'};
 	for(int i=0; i<numBlocks; i++){
 		if(freeBlockList[i]) {
-			diskFile.write("1",sizeof(char));
+			fwrite(one, sizeof(char), 1, diskFile);
+
+/*			diskFile.write("1",sizeof(char));
+*/
 	//		freeBlockListOffset += sizeof(char);
 	//		diskFile.seekp(freeBlockListOffset);
 		} else {
-			diskFile.write("0",sizeof(char));
-	//		freeBlockListOffset += sizeof(char);
+			fwrite(zero, sizeof(char), 1, diskFile);
+
+/*			diskFile.write("0",sizeof(char));
+*/	//		freeBlockListOffset += sizeof(char);
 	//	diskFile.seekp(freeBlockListOffset);
 		}
 	}
 	
-	
+	// seek to spot to begin writing freeInodeListOffset
 	int freeInodeListOffset = (FREE_INODE_LIST_OFFSET)*blockSize;
-	diskFile.seekp(freeInodeListOffset);
+	fseek(diskFile, freeInodeListOffset,0);
 
+/*	diskFile.seekp(freeInodeListOffset);
+*/
 	//Write freeInodeList out to disk
 	for(int i=0; i<256; i++){
 		if(freeiNodeList[i]) {
-			diskFile.write("1",sizeof(char));
-	//		freeInodeListOffset += sizeof(char);
+			fwrite(one, sizeof(char), 1, diskFile);
+
+/*			diskFile.write("1",sizeof(char));
+*/	//		freeInodeListOffset += sizeof(char);
 	//		diskFile.seekp(freeInodeListOffset);
 		}
 		else {
-			diskFile.write("0",sizeof(char));
-	//		freeInodeListOffset += sizeof(char);
+			fwrite(zero, sizeof(char), 1, diskFile);
+
+/*			diskFile.write("0",sizeof(char));
+*/	//		freeInodeListOffset += sizeof(char);
 	//		diskFile.seekp(freeInodeListOffset);
 		}
 		
 	}
 	
-	
-	char* test_size = new char[4];
-	diskFileREAD.seekg((blockSize) + sizeof(iNodeList[0].fileName));
-	diskFileREAD.read(test_size, sizeof(int));
-	cout << "THE ACTUAL SIZE IS " << iNodeList[0].fSize << endl;
-	cout << "the size of the file is " << test_size << endl;
-	
 
-	diskFile.close();
+	int read_fSize = 0;
+	char read_filename[32];
+	int db_array[12];	
+
+	fseek(diskFileRead, (blockSize), 0);
+	fread(read_filename, sizeof(char), 32, diskFileRead);
+	fread(&read_fSize, sizeof(int), 1, diskFileRead);
+	fread(db_array, sizeof(int), 12, diskFileRead);
+	cout << "now recovering iNode info from the file by reading it, here are the results: " << endl;
+	cout << "the name of the first file created is: " << read_filename << endl;
+	cout << "the size of this file is: " << read_fSize << endl;
+	for (int i = 0; i < 12; i++) {
+		cout << "db pointer number " << i+1 << " is " << db_array[i] << endl;
+	}
+
+//	cout << "THE ACTUAL SIZE IS " << iNodeList[0].fSize << endl;
+//	cout << "the size of the file is " << read_fSize << endl;
+	
+	fclose(diskFile);
+	fclose(diskFileRead);
+	
+//	diskFile.close();
 	
 }
 
