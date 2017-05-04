@@ -836,7 +836,7 @@ void fileSystem::shutdown(){
 
  
  _______________________________________
-|			iNode						|
+|			      iNode				    |
 |										|
 |	string: fName						|
 |										|
