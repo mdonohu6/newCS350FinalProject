@@ -522,11 +522,15 @@ void fileSystem::read(string ssfsFName, int startByte, int numBytes){
 
 	
 	
-	cout<<"READ "<<ssfsFName<<endl;
 	
 	int startBlock = startByte / blockSize;
-	int startOffset = startByte % blockSize;
+	int ofst = startByte % blockSize;
 	
+	cout<<"READ "<<ssfsFName<<endl;
+
+
+
+
 	//find iNode in iNodeList
 	int iNodeIndex;
 	for(iNodeIndex = 0; iNodeIndex<256; iNodeIndex++)
@@ -554,6 +558,9 @@ void fileSystem::read(string ssfsFName, int startByte, int numBytes){
 			if((numBytes - bytesRead) < blockSize){
 				bytesToRead = numBytes - bytesRead;
 			}
+			else if(blocksRead == startBlock){
+				bytesToRead = blockSize - ofst;
+			}
 			
 			bytesRead += bytesToRead;
 			
@@ -562,35 +569,31 @@ void fileSystem::read(string ssfsFName, int startByte, int numBytes){
 					cout<<"this shouldn't happen"<<endl;
 					break;
 				}
-				
-				diskFile.seekg((OFFSET + iNodeList[iNodeIndex].blockAddressTable[blocksRead])* blockSize);
+
+				diskFile.seekg((OFFSET + iNodeList[iNodeIndex].blockAddressTable[blocksRead])* blockSize + ofst);
 				diskFile.read(buf, bytesToRead);
-				
 			}
 			else if(blocksRead < indBlockSize){
 				int cur = blocksRead - 12;
-				diskFile.seekg((OFFSET + iNodeList[iNodeIndex].ib.blockTable[cur])* blockSize);
-				diskFile.read(buf, bytesToRead);
-				
+
+
+				diskFile.seekg((OFFSET + iNodeList[iNodeIndex].ib.blockTable[cur])* blockSize + ofst);
+				diskFile.read(buf, bytesToRead);				
 			}
 			else{
 				int cur = blocksRead - indBlockSize;
 				
 				if(cur != 0 && cur % indBlockSize == 0)
 					currentIndBlock += 1;
-				
-				diskFile.seekg((OFFSET + iNodeList[iNodeIndex].doubleIndBlockTable[currentIndBlock].blockTable[cur%indBlockSize]) * blockSize);
+
+								
+				diskFile.seekg((OFFSET + iNodeList[iNodeIndex].doubleIndBlockTable[currentIndBlock].blockTable[cur%indBlockSize]) * blockSize + ofst);
 				diskFile.read(buf, bytesToRead);
 				
 			}
 			buf[bytesToRead] = '\0';
 			
 			
-			if(blocksRead == startBlock){
-				for(int i = startOffset; i< bytesToRead; i++){
-					cout<<buf[i];
-				}
-			}
 			
 			cout<<buf;
 			

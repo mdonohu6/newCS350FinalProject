@@ -90,8 +90,8 @@ void parseInputFile(char* diskName, char* fName){
 		}
 		else if(command_split[0] == "READ"){
 			ssfsFName = command_split[1];
-			startByte = atoi(command_split[3].c_str());
-			numBytes = atoi(command_split[4].c_str());
+			startByte = atoi(command_split[2].c_str());
+			numBytes = atoi(command_split[3].c_str());
 			
 			fileSys.read(ssfsFName, startByte, numBytes);
 			
