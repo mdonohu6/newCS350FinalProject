@@ -1,0 +1,7 @@
+CREATE ssfs.txt
+IMPORT ssfs.txt unix.txt
+CAT ssfs.txt
+CAT ssfs.txt
+READ ssfs.txt 5 5
+CAT ssfs.txt
+SHUTDOWN
