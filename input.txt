@@ -1,6 +1,6 @@
 CREATE ssfs.txt
 IMPORT ssfs.txt unix.txt
 CAT ssfs.txt
-READ ssfs.txt 10 4
+WRITE ssfs.txt z 3 3
 CAT ssfs.txt
 SHUTDOWN

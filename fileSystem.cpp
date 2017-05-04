@@ -457,27 +457,19 @@ void fileSystem::write(string ssfsFName, char ch, int startByte, int numBytes){
 
 	if(iNodeIndex < 256) {
 		ofstream outFile;
-		outFile.open(diskName, ios::binary | ios::out);
+		outFile.open(diskName, ios::binary | ios::in | ios::out);
 
 		int bytesWritten = 0;
-		int blocksWrittenTo = 0;
+		int blocksWrittenTo = startByte / blockSize;
+		startByte = startByte % blockSize;
 
 		int currentIndBlock = 0;
 		// char to write = ch
 
-		int bytesToWrite = numBytes;
+		int bytesToWrite;
 
-		while(bytesWritten < bytesToWrite) {
-			if(startByte >= blockSize) {
-				startByte -= blockSize;
-				blocksWrittenTo++;
-
-				continue;
-			}
-
-			if((iNodeList[iNodeIndex].fSize - bytesWritten) < blockSize) {
-				bytesToWrite = iNodeList[iNodeIndex].fSize - bytesWritten;
-			}
+		while(bytesWritten < numBytes) {
+			bytesToWrite = min(blockSize - startByte, numBytes);
 
 			bytesWritten += bytesToWrite;
 
@@ -488,11 +480,11 @@ void fileSystem::write(string ssfsFName, char ch, int startByte, int numBytes){
 					break;
 				}
 
-				outFile.seekp((startByte + OFFSET + iNodeList[iNodeIndex].blockAddressTable[blocksWrittenTo]) * blockSize);
+				outFile.seekp(startByte + (OFFSET + iNodeList[iNodeIndex].blockAddressTable[blocksWrittenTo]) * blockSize);
 			} else if(blocksWrittenTo < indBlockSize) {
 				int cur = blocksWrittenTo - 12;
 
-				outFile.seekp((startByte + OFFSET + iNodeList[iNodeIndex].ib.blockTable[cur]) * blockSize);
+				outFile.seekp(startByte + (OFFSET + iNodeList[iNodeIndex].ib.blockTable[cur]) * blockSize);
 			} else {
 				int cur = blocksWrittenTo - indBlockSize;
 
@@ -500,13 +492,10 @@ void fileSystem::write(string ssfsFName, char ch, int startByte, int numBytes){
 					currentIndBlock += 1;
 				}
 
-				outFile.seekp((startByte + OFFSET + iNodeList[iNodeIndex].doubleIndBlockTable[currentIndBlock].blockTable[cur%indBlockSize]) * blockSize);
+				outFile.seekp(startByte + (OFFSET + iNodeList[iNodeIndex].doubleIndBlockTable[currentIndBlock].blockTable[cur%indBlockSize]) * blockSize);
 			}
 
-			char* buffer = new char[bytesToWrite];
-			for(int i = 0; i < bytesToWrite; i++) buffer[i] = ch;
-			outFile.write(buffer, bytesToWrite);
-			delete[] buffer;
+			for(int i = 0; i < bytesToWrite; i++) outFile << ch;
 			
 			startByte = 0;
 			blocksWrittenTo++;
