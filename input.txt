@@ -1,3 +1,4 @@
 CREATE ssfs.txt
-WRITE ssfs.txt a 0 200
+WRITE ssfs.txt a 124 20
 CAT ssfs.txt
+READ ssfs.txt 124 20
