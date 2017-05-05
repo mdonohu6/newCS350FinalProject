@@ -466,6 +466,8 @@ void fileSystem::write(string ssfsFName, char ch, int startByte, int numBytes){
 		if(iNodeList[iNodeIndex].getFileName() == ssfsFName)
 			break;
 
+	iNodeList[iNodeIndex].fSize += numBytes;
+
 	if(iNodeIndex < 256) {
 		ofstream outFile;
 		outFile.open(diskName, ios::binary | ios::in | ios::out);
@@ -486,9 +488,18 @@ void fileSystem::write(string ssfsFName, char ch, int startByte, int numBytes){
 
 			if(blocksWrittenTo < 12) {
 				if(iNodeList[iNodeIndex].blockAddressTable[blocksWrittenTo] == -1) {
-					cout << "this shouldn't happen" << endl;
+					for(int i = 0; i < numBlocks; i++) {
+						if(freeBlockList[i] == 0) {
+							freeBlockList[i] = 1;
+							iNodeList[iNodeIndex].blockAddressTable[blocksWrittenTo] = i;
 
-					break;
+							break;
+						}
+
+						if(i == numBlocks-1) {
+							cout << "There's no memory left! The file system wrote as much as it could before running out of memory." << endl;
+						}
+					}
 				}
 
 				outFile.seekp(startByte + (OFFSET + iNodeList[iNodeIndex].blockAddressTable[blocksWrittenTo]) * blockSize);
@@ -566,7 +577,7 @@ void fileSystem::read(string ssfsFName, int startByte, int numBytes){
 			
 			if(blocksRead < 12) { // seek to next entry in direct block table
 				if(iNodeList[iNodeIndex].blockAddressTable[blocksRead] == -1){
-					cout<<"this shouldn't happen"<<endl;
+					cout<<"Reached end of file while trying to read!"<<endl;
 					break;
 				}
 
@@ -628,14 +639,15 @@ string fileSystem::list(){
 }
 
 void fileSystem::importiNode(int iNodeIndex) {
-	ifstream in;
-	in.open(diskName, ios::binary | ios::in | ios::out);
+	FILE * in = fopen(diskName.c_str(), "rb+wb");
 
 	char iNodeBuf[sizeof(iNode2)];
 	iNode2* node = new iNode2;
-	in.seekg((FREE_INODE_LIST_OFFSET + iNodeIndex)*blockSize);
-	in.read(iNodeBuf, sizeof(iNode2));
+
+	fseek(in, (FREE_INODE_LIST_OFFSET + iNodeIndex)*blockSize,0);
+	fread(iNodeBuf, sizeof(iNode2), 1, in);
 	memcpy(node, &iNodeBuf, sizeof(iNode2));
+	cout << "import reads: " << iNodeBuf << endl;
 
 	for(int i = 0; i < 32; i++) iNodeList[iNodeIndex].fileName[i] = node->fName[i];
 	for(int i = 0; i < 12; i++) iNodeList[iNodeIndex].blockAddressTable[i] = node->blockAddressTable[i];
@@ -648,8 +660,8 @@ void fileSystem::importiNode(int iNodeIndex) {
 		int curIndBlock[indBlockSize];
 
 		int curPtr = iNodeList[iNodeIndex].ib.pointer;
-		in.seekg(curPtr*blockSize);
-		in.read(blockBuf, blockSize);
+		fseek(in, (curPtr*blockSize), 0);
+		fread(blockBuf, blockSize, 1, in);
 		memcpy(&curIndBlock, blockBuf, blockSize);
 
 		for(int i = 0; i < indBlockSize; i++) {
@@ -658,43 +670,23 @@ void fileSystem::importiNode(int iNodeIndex) {
 		}
 	}
 
-	/* not working but it looks like this section of convert is also not working
+	/*
 	char doubleBlockBuf[blockSize];
 	if(node->doubleIndBlockPointer != -1) { // not done
 		int doubleIndBlock[indBlockSize];
 		int j = 0;
-		
-		while(1) { // some condition
-			int curIndBlock[indBlockSize];
-			int curPtr = iNodeList[iNodeIndex].doubleIndBlockTable[j].pointer;
-
-			in.seekg(curPtr*blockSize);
-			in.read(blockBuf, blockSize);
-			memcpy(curIndBlock, blockBuf, blockSize);
-
-			for(int i = 0; i < indBlockSize; i++) {
-				if(i > curIndBlock[i]) iNodeList[iNodeIndex].doubleIndBlockTable
-			}
-
-			doubleIndBlock[j] = curPtr;
-			j++;
-		}
-		while(1) { // some condition
-		}
-
-
 		in.seekg(curPtr*blockSize);
 		in.read(doubleBlockBuf, blockSize);
 		memcpy(doubleIndBlock, doubleBlockBuf, blockSize);
+		// unfinished, need to reorder this stuff
 	}*/
 
-	in.close();
+	fclose(in);
 }
 
 
 void fileSystem::convertiNode(int iNodeIndex){
-
-	FILE * out = fopen(diskName.c_str(), "w");
+	FILE * out = fopen(diskName.c_str(), "rb+wb");
 /*
 struct iNode2{
 	char fName[32];
@@ -710,21 +702,26 @@ struct iNode2{
 
 	iNode2 * node = new iNode2;
 
-	for(int i = 0; i<32; i++) node ->fName[i] = iNodeList[iNodeIndex].fileName[i];
+	for(int i = 0; i<32; i++) {
+		node ->fName[i] = iNodeList[iNodeIndex].fileName[i];
 
-	for(int i = 0; i<12; i++) node ->blockAddressTable[i] = iNodeList[iNodeIndex].blockAddressTable[i];
-		
+		cout << "copying into node struct fName: " << node->fName[i] << endl;
+	}
+
+	for(int i = 0; i<12; i++) {
+		node ->blockAddressTable[i] = iNodeList[iNodeIndex].blockAddressTable[i];
+	
+		cout << "copying into node struct block address table: " << node->blockAddressTable[i] << endl;
+	}
 
 	node -> indBlockPointer = iNodeList[iNodeIndex].ib.pointer;
 	node -> doubleIndBlockPointer = iNodeList[iNodeIndex].doubleIndBlock;
 	node -> fSize = iNodeList[iNodeIndex].fSize;
 
-	cout << "seeking to: " << (FREE_INODE_LIST_OFFSET + iNodeIndex)*blockSize << endl;
-
 	memcpy(iNodeBuf, &node, sizeof(iNode2));
+	cout << "writing contents: " << iNodeBuf <<endl;
 	fseek(out, (FREE_INODE_LIST_OFFSET + iNodeIndex)*blockSize,0);
 	fwrite(iNodeBuf, blockSize, 1, out);
-
 	
 	char* blockBuf = new char[blockSize];
 	if(node -> indBlockPointer != -1){
@@ -755,10 +752,10 @@ struct iNode2{
 			}
 			doubleIndBlock[j] = curPtr;
 			j++;
-		
-		memcpy(blockBuf, curIndBlk, blockSize);
-		fseek(out, curPtr*blockSize,0);
-		fwrite(blockBuf, blockSize, 1, out);
+			
+			memcpy(blockBuf, curIndBlk, blockSize);
+			fseek(out, curPtr*blockSize,0);
+			fwrite(blockBuf, blockSize, 1, out);
 		}
 		while(j < indBlockSize){
 			doubleIndBlock[j] = -1;
@@ -771,6 +768,15 @@ struct iNode2{
 	}
 
 	fclose(out);
+
+	cout << "out is closed, now opening in" << endl;
+
+	char* testBuf[sizeof(iNode2)];
+	FILE * in = fopen(diskName.c_str(), "r");
+	fseek(in, (FREE_INODE_LIST_OFFSET + iNodeIndex)*blockSize,0);
+	fread(testBuf, sizeof(iNode2), 1, in);
+	cout << "reading contents: " << testBuf << endl;
+	fclose(in);
 }
 
 
@@ -817,7 +823,10 @@ void fileSystem::shutdown(){
 
 
 	for(int i = 0; i<256; i++){
-		if(freeiNodeList[i] == 1) convertiNode(i);
+		if(freeiNodeList[i] == 1) {
+			convertiNode(i);
+			importiNode(i);
+		}
 	}	
 
 

@@ -1,18 +1,3 @@
 CREATE ssfs.txt
-CREATE b.txt
-CREATE a.txt
-CREATE 0.txt
-CREATE 1.txt
-CREATE 2.txt
-CREATE 3.txt
-CREATE 4.txt
-CREATE 5.txt
-CREATE 6.txt
-CREATE 7.txt
-CREATE 8.txt
-CREATE 9.txt
-IMPORT ssfs.txt unix.txt
+WRITE ssfs.txt a 0 200
 CAT ssfs.txt
-WRITE ssfs.txt a 681 700
-CAT ssfs.txt
-SHUTDOWN
