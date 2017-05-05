@@ -464,6 +464,8 @@ void fileSystem::write(string ssfsFName, char ch, int startByte, int numBytes){
 		if(iNodeList[iNodeIndex].getFileName() == ssfsFName)
 			break;
 
+	iNodeList[iNodeIndex].fSize += numBytes;
+
 	if(iNodeIndex < 256) {
 		ofstream outFile;
 		outFile.open(diskName, ios::binary | ios::in | ios::out);
