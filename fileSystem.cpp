@@ -655,12 +655,13 @@ void fileSystem::importiNode(int iNodeIndex) {
 		}
 	}
 
+	/* not working but it looks like this section of convert is also not working
 	char doubleBlockBuf[blockSize];
 	if(node->doubleIndBlockPointer != -1) { // not done
 		int doubleIndBlock[indBlockSize];
 		int j = 0;
 		
-		while(/*some condition*/) {
+		while(1) { // some condition
 			int curIndBlock[indBlockSize];
 			int curPtr = iNodeList[iNodeIndex].doubleIndBlockTable[j].pointer;
 
@@ -675,14 +676,14 @@ void fileSystem::importiNode(int iNodeIndex) {
 			doubleIndBlock[j] = curPtr;
 			j++;
 		}
-		while(/*some condition*/) {
+		while(1) { // some condition
 		}
 
 
 		in.seekg(curPtr*blockSize);
 		in.read(doubleBlockBuf, blockSize);
 		memcpy(doubleIndBlock, doubleBlockBuf, blockSize);
-	}
+	}*/
 
 	in.close();
 }
