@@ -1,0 +1,7 @@
+CREATE ssfs.txt
+LIST
+CAT ssfs.txt
+IMPORT ssfs.txt smallfile.txt
+LIST
+CAT ssfs.txt
+SHUTDOWN

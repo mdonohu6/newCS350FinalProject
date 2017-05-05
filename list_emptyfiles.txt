@@ -1,0 +1,5 @@
+CREATE list_empty1.txt
+CREATE list_empty2.txt
+CREATE list_empty3.txt
+LIST
+SHUTDOWN

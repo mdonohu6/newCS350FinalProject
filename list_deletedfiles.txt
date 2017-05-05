@@ -1,0 +1,7 @@
+CREATE list_delete1.txt
+CREATE list_delete2.txt
+CREATE list_delete3.txt
+LIST
+DELETE list_delete1.txt
+LIST
+SHUTDOWN

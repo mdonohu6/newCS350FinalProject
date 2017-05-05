@@ -1,0 +1,74 @@
+// CS350 - Program 5
+// DEMO.txt
+
+Effort [100 POINTS]:
+	Trivial
+
+ssfs_mkdsk [5 POINTS]:
+	128 < blockSize < 512
+		./ssfs_mkdisk 1024 513 DISK.txt
+		./ssfs_mkdisk 1024 127 DISK.txt	
+	
+	1024 < numBlocks < 128k
+		./ssfs_mkdisk 1023 128 DISK.txt
+		./ssfs_mkdisk 128001 128 DISK.txt
+	
+	Static
+		./ssfs_mkdisk 1024 128 DISK.txt
+
+LIST - no files [5 POINTS]:
+		./ssfs DISK.txt list_nofiles.txt
+	
+LIST - empty files [5 POINTS]:
+		./ssfs DISK.txt list_emptyfiles.txt
+
+LIST - deleted files [5 POINTS]:
+		./ssfs DISK.txt list_deletedfiles.txt
+
+IMPORT - Small file [5 POINTS]:
+		./ssfs DISK.txt import_smallfile.txt
+
+IMPORT - Medium file [5 POINTS]:
+		./ssfs DISK.txt import_mediumfile.txt
+
+IMPORT - Large file [5 POINTS]:
+		./ssfs DISK.txt import_largefile.txt
+
+IMPORT - XL file: [+5 POINTS BONUS]:
+		./ssfs DISK.txt import_XLfile.txt
+
+CAT - Small file [5 POINTS]:
+	see “IMPORT - Small file [5 POINTS]:”
+
+CAT - Medium file [5 POINTS]:
+	see “IMPORT - Medium file [5 POINTS]:”
+
+CAT - Large file [5 POINTS]:
+	see “IMPORT - Large file [5 POINTS]:”
+
+CAT - XL file: [+5 POINTS BONUS]:
+	see “IMPORT - XL file: [+5 POINTS BONUS]:”
+
+Small READ [5 POINTS]
+		./ssfs DISK.txt read_small.txt
+
+Medium READ [5 POINTS]
+	SEGFAULT
+
+Small WRITE [5 POINTS]
+		./ssfs DISK.txt write_small.txt
+
+Large/Growing WRITE [5 POINTS]
+	WON’T WORK IF ‘medium READ’ DOESN’T WORK
+
+Shutdown/Restart [10 POINTS]:
+	Lmao
+
+Bounded Buffer [10 POINTS]:
+	*WORK IN PROGRESS*
+
+Multiple Threads [10 POINTS]:
+	*WORK IN PROGRESS*
+
+BONUS?
+	TBD

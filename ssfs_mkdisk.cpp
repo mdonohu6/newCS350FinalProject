@@ -139,11 +139,18 @@ int main(int argc, char** argv){
 	
 	ofs.close();  
 
+    
+    if (numBlocks < 1024 )
+        perror ("Num Blocks cannot be less than 1024 blocks.");
+    else if (numBlocks > 128000)
+        perror ("Block Size cannot be greater than 128k blocks.");
 	if (blockSize < 128 )
         perror ("Block Size cannot be less than 128 bytes.");
     else if (blockSize > 512)
         perror ("Block Size cannot be greater than 512 bytes.");
 	
+ 
+    
 	cout << "made it to the bottom " << endl;
     
 	//TODO
