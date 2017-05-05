@@ -149,7 +149,9 @@ void fileSystem::create(string ssfsFName){
 	
 }
 void fileSystem::import(string ssfsFName, string unixFName){
-
+    cout << "<IMPORT>" << endl;
+    
+    //TO DO: If	a file named <SSFS file name> does not yet exist in SSFS, then a new one should	be created	to contain the contents of <unix file name>
 	
 	//find index in iNodeList where ssfs file is
 	int iNodeIndex;
@@ -318,7 +320,7 @@ void fileSystem::import(string ssfsFName, string unixFName){
 void fileSystem::cat(string ssfsFName){
 	
 	
-	cout<<"CAT "<<ssfsFName<<endl;
+	cout<<"<CAT> "<<ssfsFName<<endl;
 	
 	
 	//find iNode in iNodeList
@@ -457,7 +459,7 @@ void fileSystem::del(string ssfsFName){
 }
 
 void fileSystem::write(string ssfsFName, char ch, int startByte, int numBytes){
-	
+    cout << "<WRITE>" << endl;
 	//find iNode in iNodeList
 	int iNodeIndex;
 	for(iNodeIndex = 0; iNodeIndex<256; iNodeIndex++)
@@ -614,6 +616,7 @@ void fileSystem::read(string ssfsFName, int startByte, int numBytes){
 
 
 string fileSystem::list(){
+    cout << "<LIST>" <<endl;
 	string fileList = "";
 	
 	for (int i = 0; i<256; i++) {
