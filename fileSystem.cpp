@@ -28,6 +28,15 @@ struct Superblock{
 	
 };
 
+struct iNode2{
+	char fName[32];
+	int blockAddressTable[12];
+	int indBlockPointer;
+	int doubleIndBlockPointer;
+	int fSize;
+
+};
+
 
 
 int getFileSize(string fName){
@@ -616,249 +625,136 @@ string fileSystem::list(){
 }
 
 
+void fileSystem::convertiNode(int iNodeIndex){
+
+	FILE * out = fopen(diskName.c_str(), "w");
+/*
+struct iNode2{
+	char fName[32];
+	int blockAddressTable[12];
+	int indBlockPointer;
+	int doubleIndBlockPointer;
+	int fSize;
+
+};
+*/
+	char* iNodeBuf[sizeof(iNode2)];
+
+
+	iNode2 * node = new iNode2;
+
+	for(int i = 0; i<32; i++) node ->fName[i] = iNodeList[iNodeIndex].fileName[i];
+
+	for(int i = 0; i<12; i++) node ->blockAddressTable[i] = iNodeList[iNodeIndex].blockAddressTable[i];
+		
+
+	node -> indBlockPointer = iNodeList[iNodeIndex].ib.pointer;
+	node -> doubleIndBlockPointer = iNodeList[iNodeIndex].doubleIndBlock;
+	node -> fSize = iNodeList[iNodeIndex].fSize;
+
+	cout << "seeking to: " << (FREE_INODE_LIST_OFFSET + iNodeIndex)*blockSize << endl;
+
+	memcpy(iNodeBuf, &node, sizeof(iNode2));
+	fseek(out, (FREE_INODE_LIST_OFFSET + iNodeIndex)*blockSize,0);
+	fwrite(iNodeBuf, blockSize, 1, out);
+
+	
+	char* blockBuf = new char[blockSize];
+	if(node -> indBlockPointer != -1){
+		int curIndBlk[indBlockSize];
+
+		int curPtr = iNodeList[iNodeIndex].ib.pointer;
+		for(int i = 0; i<indBlockSize; i++){
+			if(i > iNodeList[iNodeIndex].ib.blockTable.size()) curIndBlk[i] = -1;
+			else curIndBlk[i] = iNodeList[iNodeIndex].ib.blockTable[i];
+		}
+
+		memcpy(blockBuf, curIndBlk, blockSize);
+		fseek(out, curPtr*blockSize,0);
+		fwrite(blockBuf, blockSize, 1, out);
+	}
+
+
+	char* doubleBlockBuf = new char[blockSize];
+	if(node -> doubleIndBlockPointer != -1){
+		int doubleIndBlock[indBlockSize];
+		int j = 0;
+		while(iNodeList[iNodeIndex].doubleIndBlockTable.size() != 0){
+			int curIndBlk[indBlockSize];
+			int curPtr = iNodeList[iNodeIndex].doubleIndBlockTable[j].pointer;
+			for(int i = 0; i<indBlockSize; i++){
+				if(i > iNodeList[iNodeIndex].doubleIndBlockTable.front().blockTable.size()) curIndBlk[i] = -1;
+				else curIndBlk[i] = iNodeList[iNodeIndex].doubleIndBlockTable.front().blockTable[i];
+			}
+			doubleIndBlock[j] = curPtr;
+			j++;
+		
+		memcpy(blockBuf, curIndBlk, blockSize);
+		fseek(out, curPtr*blockSize,0);
+		fwrite(blockBuf, blockSize, 1, out);
+		}
+		while(j < indBlockSize){
+			doubleIndBlock[j] = -1;
+			j++;
+		}
+		memcpy(doubleBlockBuf, doubleIndBlock, blockSize);
+		fseek(out, (node -> doubleIndBlockPointer)*blockSize,0);
+		fwrite(doubleBlockBuf, blockSize, 1, out);
+
+	}
+
+	fclose(out);
+}
+
+
 void fileSystem::shutdown(){
 
-    cout << " made it to shut down" << endl;
-/*	ofstream diskFile;
-	diskFile.open(diskName, ios::out | ios::binary | ios::ate);
-*/
-	//open the disk file
-	// try doing shutdown using FILE object instead of ofstream object
-	FILE* diskFile = fopen(diskName.c_str(), "w");
-	
-	//open the unix file
-	FILE* diskFileRead = fopen(diskName.c_str(), "r");	
+
+	FILE * out = fopen(diskName.c_str(), "w");
+
+
 
 	Superblock s;
+
+	char sBuf[sizeof(Superblock)];
+
 
 	s.offset = offset;
 	s.blockSize = blockSize;
 	s.numBlocks = numBlocks;
 	s.hasFiles = 1;
-	fseek(diskFile, 0, 0);
-	fwrite(&s, sizeof(Superblock), 1, diskFile);
+	fseek(out, 0, 0);
+	memcpy(sBuf, &s, sizeof(s));
 
+	fwrite(sBuf, blockSize, 1, out);
 
-/*	ifstream diskFileREAD;
-	diskFileREAD.open(diskName, ios::in | ios::binary);
-*/
-	//MARK: Maybe write superblock out to file, just to be safe
-		
-	int iNodeListSeekOffset;
+	char freeiNodeBuf[256];
 
 	for(int i=0; i<256; i++){
-		if(freeiNodeList[i]){
-			// seek to the beginning of the next available iNodeList BLOCK in the file
-			iNodeListSeekOffset = (1+i) * blockSize; 
-
-/*			diskFile.seekp(iNodeListSeekOffset);
-			diskFile.write(iNodeList[i].fileName, sizeof(iNodeList[i].fileName));
-*/
-
-			// seek in the FILE way
-			// don't need to seek after writing because
-			// fwrite automatically moves the file pointer by num of bytes written
-			fseek(diskFile,iNodeListSeekOffset, 0);
-			fwrite(&iNodeList[i].fileName, sizeof(char), 32, diskFile);
-
-			// increment iNodeListSeekOffset by the 32 bytes it took to write the filename
-/*			iNodeListSeekOffset += sizeof(iNodeList[i].fileName);
-			diskFile.seekp(iNodeListSeekOffset);
-*/
-			// now write the file's size
-/*			diskFile.write(reinterpret_cast<const char*>(&iNodeList[i].fSize), sizeof(iNodeList[i].fSize));
-*/			
-			// write the 4 byte integer fSize to the disk immediately 
-			// following the filename			
-			fwrite(&iNodeList[i].fSize, sizeof(int), 1, diskFile);
-	
-/*			iNodeListSeekOffset += sizeof(int);
-			diskFile.seekp(iNodeListSeekOffset);
-*/
-/*			for (int k = 0; k < 12; k++) {
-				diskFile.write(reinterpret_cast<char*>(&iNodeList[i].blockAddressTable[k]), sizeof(int));
-*/
-			// don't need to use the loop with fwrite because we can write the whole
-			// block address array by writing 12 ints at once
-			fwrite(&iNodeList[i].blockAddressTable, sizeof(int), 12, diskFile);
-				// increment seek offset by the size of one int to get ready to write the next one 
-				// in the array
-/*				iNodeListSeekOffset += sizeof(int);
-				diskFile.seekp(iNodeListSeekOffset);
-			}
-*/
-
-			// now we can write the indirect block pointer number
-			fwrite(&iNodeList[i].ib.pointer, sizeof(int), 1, diskFile);
-
-/*			diskFile.write(reinterpret_cast<char*>(&iNodeList[i].ib.pointer), sizeof(int));
-			iNodeListSeekOffset += sizeof(int);
-*/
-			// now we can write the double indirect block pointer
-			fwrite(&iNodeList[i].doubleIndBlock, sizeof(int), 1, diskFile);
-
-/*			diskFile.write(reinterpret_cast<char*>(&iNodeList[i].doubleIndBlock), sizeof(int));
-			iNodeListSeekOffset += sizeof(int);
-*/
-		}
+		if(freeiNodeList[i]) freeiNodeBuf[i] = '1';
+		else freeiNodeBuf[i] = '0';
 	}
+	fseek(out, FREE_INODE_LIST_OFFSET*blockSize, 0);
+	fwrite(freeiNodeBuf, blockSize, 1, out);
 
-	// now we want to write teh free block list to the disk file
-	// so seek to the write block 
-	int freeBlockListOffset = (FREE_BLOCK_LIST_OFFSET)*blockSize;
-	fseek(diskFile,freeBlockListOffset, 0);
+	char freeBlockBuf[256];
 
-/*	diskFile.seekp(freeBlockListOffset);
-*/
-	//Write freeBlockList out to disk
-	char one[] = {'1'}; 
-	int zero[] = {'0'};
-	for(int i=0; i<numBlocks; i++){
-		if(freeBlockList[i]) {
-			fwrite(one, sizeof(char), 1, diskFile);
-
-/*			diskFile.write("1",sizeof(char));
-*/
-	//		freeBlockListOffset += sizeof(char);
-	//		diskFile.seekp(freeBlockListOffset);
-		} else {
-			fwrite(zero, sizeof(char), 1, diskFile);
-
-/*			diskFile.write("0",sizeof(char));
-*/	//		freeBlockListOffset += sizeof(char);
-	//	diskFile.seekp(freeBlockListOffset);
-		}
-	}
-	
-	// seek to spot to begin writing freeInodeListOffset
-	int freeInodeListOffset = (FREE_INODE_LIST_OFFSET)*blockSize;
-	fseek(diskFile, freeInodeListOffset,0);
-
-/*	diskFile.seekp(freeInodeListOffset);
-*/
-	//Write freeInodeList out to disk
 	for(int i=0; i<256; i++){
-		if(freeiNodeList[i]) {
-			fwrite(one, sizeof(char), 1, diskFile);
-
-/*			diskFile.write("1",sizeof(char));
-*/	//		freeInodeListOffset += sizeof(char);
-	//		diskFile.seekp(freeInodeListOffset);
-		}
-		else {
-			fwrite(zero, sizeof(char), 1, diskFile);
-
-/*			diskFile.write("0",sizeof(char));
-*/	//		freeInodeListOffset += sizeof(char);
-	//		diskFile.seekp(freeInodeListOffset);
-		}
+		if(freeBlockList[i]) freeBlockBuf[i] = '1';
+		else freeBlockBuf[i] = '0';
 		
 	}
-
-	// now that we've written all the meta data we need to signify to future runs of our
-	// program that data already resides on the disk, so write a 1 to the 
-
-	// superblock's 'hasFiles' variable
+//	fseek(out, FREE_BLOCK_LIST_OFFSET*blockSize, 0);
+//	fwrite(freeBlockBuf, blockSize, 1, out);
 
 
 
-
-/*	
-	int read_has_files = -1;
-	fseek(diskFileRead, 4*sizeof(int), 0);
-	fread(&read_has_files, sizeof(int), 1, diskFileRead); 
-	cout << "BEFORE has files is currently set to " << read_has_files << endl;
-
-	int has_files_true = 1;
-	fseek(diskFile, 4*sizeof(int), 0);
-	fwrite(&has_files_true, sizeof(int), 1, diskFile);
-	*/
-
-	Superblock test;
-
-	int new_read_has_files = -1;
-	fseek(diskFileRead, 0, 0);
-	fread(&test, sizeof(Superblock), 1, diskFileRead); 
-	cout << "AFTER has files is currently set to " << test.hasFiles << endl;
+	for(int i = 0; i<256; i++){
+		if(freeiNodeList[i] == 1) convertiNode(i);
+	}	
 
 
-	int read_fSize = 0;
-	char read_filename[32];
-	int db_array[12];	
 
-	fseek(diskFileRead, (blockSize), 0);
-	fread(read_filename, sizeof(char), 32, diskFileRead);
-	fread(&read_fSize, sizeof(int), 1, diskFileRead);
-	fread(db_array, sizeof(int), 12, diskFileRead);
-	cout << "now recovering iNode info from the file by reading it, here are the results: " << endl;
-	cout << "the name of the first file created is: " << read_filename << endl;
-	cout << "the size of this file is: " << read_fSize << endl;
-	for (int i = 0; i < 12; i++) {
-		cout << "db pointer number " << i+1 << " is " << db_array[i] << endl;
-	}
 
-//	cout << "THE ACTUAL SIZE IS " << iNodeList[0].fSize << endl;
-//	cout << "the size of the file is " << read_fSize << endl;
-	
-	fclose(diskFile);
-	fclose(diskFileRead);
-	
-//	diskFile.close();
 	
 }
-
-
-
-/*
- _______________________________
- |								|
- |			Superblock			|
- |  							|
- |	int:numBlocks				|	<-----  size: 1 block
- |	int:blockSize				|
- |	int:offset					|
- |	int:hasFiles				|
- |______________________________|
- |								|
- |			iNodeList			|   <----- size: 256 blocks
- |								|
- |______________________________|
- |								|
- |			freeBlockList		|   <----- size: 1 block
- |______________________________|
- |								|
- |			freeiNodeList		|   <----- size: 1 block
- |								|
- |------------------------------|	<-------
- |								|			|
- |								|			|_______ offset points here
- |								|
- |								|
- |								|
- |			mainMemory			|	<----- size: numBlocks*blockSize bytes
- |								|
- |								|
- |								|
- |								|
- |								|
- |								|
- |______________________________|
-
- 
- _______________________________________
-|			      iNode				    |
-|										|
-|	string: fName						|
-|										|
-|	int: fSize							|
-|										|
-|	int[12]: blockAddressTable			|
-|										|
-|	int indBlockPointer					|
-|										|
-|	int doubleIndBlockPointer			|
-|										|
-|										|
-|_______________________________________|
- 
- */
