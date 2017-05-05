@@ -565,19 +565,20 @@ void fileSystem::read(string ssfsFName, int startByte, int numBytes){
 		
 		
 		while(bytesRead < numBytes) {
-			
 			if((numBytes - bytesRead) < blockSize){
 				bytesToRead = numBytes - bytesRead;
 			}
 			else if(blocksRead == startBlock){
 				bytesToRead = blockSize - ofst;
+			} else {
+				bytesToRead = blockSize;
 			}
 			
 			bytesRead += bytesToRead;
 			
 			if(blocksRead < 12) { // seek to next entry in direct block table
 				if(iNodeList[iNodeIndex].blockAddressTable[blocksRead] == -1){
-					cout<<"Reached end of file while trying to read!"<<endl;
+					cout<< endl << "Reached end of file while trying to read!"<<endl;
 					break;
 				}
 
@@ -587,13 +588,12 @@ void fileSystem::read(string ssfsFName, int startByte, int numBytes){
 			else if(blocksRead < indBlockSize){
 				int cur = blocksRead - 12;
 
-
 				diskFile.seekg((OFFSET + iNodeList[iNodeIndex].ib.blockTable[cur])* blockSize + ofst);
 				diskFile.read(buf, bytesToRead);				
 			}
 			else{
 				int cur = blocksRead - indBlockSize;
-				
+
 				if(cur != 0 && cur % indBlockSize == 0)
 					currentIndBlock += 1;
 
@@ -781,6 +781,8 @@ struct iNode2{
 
 
 void fileSystem::shutdown(){
+	// yeah, things totally happen here
+	return;
 
 
 	FILE * out = fopen(diskName.c_str(), "w");
