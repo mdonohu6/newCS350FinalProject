@@ -624,6 +624,69 @@ string fileSystem::list(){
 	return fileList;
 }
 
+void fileSystem::importiNode(int iNodeIndex) {
+	ifstream in;
+	in.open(diskName, ios::binary | ios::in | ios::out);
+
+	char iNodeBuf[sizeof(iNode2)];
+	iNode2* node = new iNode2;
+	in.seekg((FREE_INODE_LIST_OFFSET + iNodeIndex)*blockSize);
+	in.read(iNodeBuf, sizeof(iNode2));
+	memcpy(node, &iNodeBuf, sizeof(iNode2));
+
+	for(int i = 0; i < 32; i++) iNodeList[iNodeIndex].fileName[i] = node->fName[i];
+	for(int i = 0; i < 12; i++) iNodeList[iNodeIndex].blockAddressTable[i] = node->blockAddressTable[i];
+	iNodeList[iNodeIndex].ib.pointer = node->indBlockPointer;
+	iNodeList[iNodeIndex].doubleIndBlock = node->doubleIndBlockPointer;
+	iNodeList[iNodeIndex].fSize = node->fSize;
+
+	char blockBuf[blockSize];
+	if(node->indBlockPointer != -1) { // done
+		int curIndBlock[indBlockSize];
+
+		int curPtr = iNodeList[iNodeIndex].ib.pointer;
+		in.seekg(curPtr*blockSize);
+		in.read(blockBuf, blockSize);
+		memcpy(&curIndBlock, blockBuf, blockSize);
+
+		for(int i = 0; i < indBlockSize; i++) {
+			if(i > curIndBlock[i]) iNodeList[iNodeIndex].ib.blockTable = vector<int>();
+			else iNodeList[iNodeIndex].ib.blockTable[i] = curIndBlock[i];
+		}
+	}
+
+	char doubleBlockBuf[blockSize];
+	if(node->doubleIndBlockPointer != -1) { // not done
+		int doubleIndBlock[indBlockSize];
+		int j = 0;
+		
+		while(/*some condition*/) {
+			int curIndBlock[indBlockSize];
+			int curPtr = iNodeList[iNodeIndex].doubleIndBlockTable[j].pointer;
+
+			in.seekg(curPtr*blockSize);
+			in.read(blockBuf, blockSize);
+			memcpy(curIndBlock, blockBuf, blockSize);
+
+			for(int i = 0; i < indBlockSize; i++) {
+				if(i > curIndBlock[i]) iNodeList[iNodeIndex].doubleIndBlockTable
+			}
+
+			doubleIndBlock[j] = curPtr;
+			j++;
+		}
+		while(/*some condition*/) {
+		}
+
+
+		in.seekg(curPtr*blockSize);
+		in.read(doubleBlockBuf, blockSize);
+		memcpy(doubleIndBlock, doubleBlockBuf, blockSize);
+	}
+
+	in.close();
+}
+
 
 void fileSystem::convertiNode(int iNodeIndex){
 

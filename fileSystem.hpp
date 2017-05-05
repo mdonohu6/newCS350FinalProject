@@ -60,6 +60,7 @@ public:
     string list();
     void shutdown();
     void convertiNode(int);
+    void importiNode(int);
 private:
 	bool * freeBlockList; // allocate this when we know size
     bool freeiNodeList [256] = {false};
