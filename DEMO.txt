@@ -53,13 +53,13 @@ Small READ [5 POINTS]
 		./ssfs DISK.txt read_small.txt
 
 Medium READ [5 POINTS]
-	SEGFAULT
+		./ssfs DISK.txt read_medium.txt
 
 Small WRITE [5 POINTS]
 		./ssfs DISK.txt write_small.txt
 
 Large/Growing WRITE [5 POINTS]
-	WON’T WORK IF ‘medium READ’ DOESN’T WORK
+		./ssfs DISK.txt write_large.txt
 
 Shutdown/Restart [10 POINTS]:
 	Lmao

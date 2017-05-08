@@ -1,0 +1,5 @@
+CREATE ssfs.txt
+IMPORT ssfs.txt writefile.txt
+WRITE ssfs.txt # 24 1025
+READ ssfs.txt 22 1035
+SHUTDOWN
