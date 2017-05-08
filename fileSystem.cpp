@@ -118,6 +118,7 @@ fileSystem::fileSystem(string fileName){
 }
 
 void fileSystem::create(string ssfsFName){
+    cout << "<CREATE> "  << ssfsFName <<endl;
 	// store file name in tab2
     char tab2[1024];
     strncpy(tab2, ssfsFName.c_str(), sizeof(tab2));
@@ -145,7 +146,7 @@ void fileSystem::create(string ssfsFName){
     }
     
     if (!freeFlag)
-        cout << "There is not enough free memory to create a new file.";
+        cout << "There is not enough free memory to create a new file." << endl;
 	
 }
 void fileSystem::import(string ssfsFName, string unixFName){
@@ -400,7 +401,7 @@ void fileSystem::cat(string ssfsFName){
 
 void fileSystem::del(string ssfsFName){
 	
-	
+    cout << "<DELETE>" << endl;
 	//find iNode in iNodeList
 	int iNodeIndex;
 	for(iNodeIndex = 0; iNodeIndex<256; iNodeIndex++)

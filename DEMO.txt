@@ -71,4 +71,4 @@ Multiple Threads [10 POINTS]:
 	*WORK IN PROGRESS*
 
 BONUS?
-	TBD
+	./ssfs DISK.txt fillup.txt
