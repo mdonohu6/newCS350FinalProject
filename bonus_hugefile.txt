@@ -1,0 +1,5 @@
+CREATE ssfs.txt
+IMPORT ssfs.txt ohmygoditsHUGE.txt
+LIST
+CAT ssfs.txt
+SHUTDOWN
